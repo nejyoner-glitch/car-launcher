@@ -183,7 +183,10 @@ class MainActivity : Activity() {
         btnPlay.setOnClickListener { mediaPlayPause() }
         findViewById<View>(R.id.navHome).setOnClickListener { showQuickActions() }
         findViewById<View>(R.id.navCarplay).setOnClickListener { openCarPlay() }
-        findViewById<View>(R.id.navMedia).setOnClickListener { showAllApps() }
+        findViewById<View>(R.id.navMedia).setOnClickListener {
+            val controller = activeController()
+            if (controller != null) launchPackage(controller.packageName) else showAllApps()
+        }
         findViewById<View>(R.id.navVehicle).setOnClickListener { showVehicleMenu() }
         findViewById<View>(R.id.navApps).setOnClickListener { showAllApps() }
         findViewById<View>(R.id.navSettings).setOnClickListener { showSettings() }
