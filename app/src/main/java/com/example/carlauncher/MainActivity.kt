@@ -6,6 +6,13 @@ import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.Uri
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.widget.FrameLayout
+import java.util.Calendar
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -55,6 +62,7 @@ class MainActivity : Activity() {
     private companion object {
         const val SLOT_COUNT = 6
         const val REQ_LOCATION = 100
+        const val REQ_WALLPAPER = 101
         var autoStarted = false
 
         val ACCENTS = intArrayOf(
@@ -95,8 +103,14 @@ class MainActivity : Activity() {
 
     private var locationManager: LocationManager? = null
     private var lastLoc: Location? = null
+    private var pendingAutostart: Runnable? = null
     private var tripKm = 0f
     private var maxKmh = 0
+    private var driveStartedAt = 0L
+    private var drivingSeconds = 0L
+    private var lastThemeHour = -1
+    private var cachedWallpaperUri: String? = null
+    private var cachedWallpaper: BitmapDrawable? = null
     private var overLimit = false
     private var tone: ToneGenerator? = null
 
@@ -128,11 +142,16 @@ class MainActivity : Activity() {
 
         tripKm = prefs.getFloat("trip", 0f)
         maxKmh = prefs.getInt("max", 0)
+        drivingSeconds = prefs.getLong("driveSeconds", 0L)
 
         findViewById<View>(R.id.btnPrev).setOnClickListener { mediaPrev() }
         findViewById<View>(R.id.btnNext).setOnClickListener { mediaNext() }
         btnPlay.setOnClickListener { mediaPlayPause() }
         findViewById<View>(R.id.btnAllApps).setOnClickListener { showAllApps() }
+        findViewById<View>(R.id.btnAllApps).setOnLongClickListener { showQuickActions(); true }
+        clock.setOnClickListener { showQuickActions() }
+        clock.setOnLongClickListener { showScreenSaver(); true }
+        weatherText.setOnClickListener { showQuickActions() }
         findViewById<View>(R.id.btnVolDown).setOnClickListener { changeVolume(AudioManager.ADJUST_LOWER) }
         findViewById<View>(R.id.btnVolUp).setOnClickListener { changeVolume(AudioManager.ADJUST_RAISE) }
         findViewById<View>(R.id.btnMute).setOnClickListener {
@@ -155,15 +174,20 @@ class MainActivity : Activity() {
         }
 
         buildShortcuts()
+        val widgetIds = intArrayOf(R.id.weather, R.id.mediaCard, R.id.speedCard)
+        widgetIds.forEachIndexed { index, id -> if (!prefs.getBoolean("widget$index", true)) findViewById<View>(id).visibility = View.GONE }
         applyTheme()
         updateTripText()
         requestLocationIfNeeded()
 
         // Açılışta seçili uygulamayı (ör. Zlink) bir kez otomatik başlat.
-        if (savedInstanceState == null && !autoStarted && SystemClock.elapsedRealtime() < 3 * 60 * 1000) {
-            autoStarted = true
+        if (savedInstanceState == null && !autoStarted) {
             val pkg = prefs.getString("autostart", null)
-            if (pkg != null) handler.postDelayed({ launchPackage(pkg) }, 3000)
+            if (pkg != null) {
+                autoStarted = true
+                pendingAutostart = Runnable { launchPackage(pkg); pendingAutostart = null }
+                handler.postDelayed(pendingAutostart!!, 3000)
+            }
         }
     }
 
@@ -179,11 +203,14 @@ class MainActivity : Activity() {
         super.onPause()
         stopLocation()
         handler.removeCallbacks(tick)
-        prefs.edit().putFloat("trip", tripKm).putInt("max", maxKmh).apply()
+        pendingAutostart?.let { handler.removeCallbacks(it) }
+        pendingAutostart = null
+        prefs.edit().putFloat("trip", tripKm).putInt("max", maxKmh).putLong("driveSeconds", drivingSeconds).apply()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
         tone?.release()
         tone = null
     }
@@ -210,7 +237,19 @@ class MainActivity : Activity() {
     private fun accentColor(): Int = ACCENTS[prefs.getInt("accent", 0).coerceIn(0, ACCENTS.size - 1)]
 
     private fun applyTheme() {
-        root.setBackgroundColor(BGS[prefs.getInt("bg", 0).coerceIn(0, BGS.size - 1)])
+        lastThemeHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val night = prefs.getBoolean("nightAuto", false) && (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) >= 19 || Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < 7)
+        root.setBackgroundColor(if (night) 0xFF05080E.toInt() else BGS[prefs.getInt("bg", 0).coerceIn(0, BGS.size - 1)])
+        val wallpaper = prefs.getString("wallpaper", null)
+        if (wallpaper != null) try {
+            if (cachedWallpaperUri != wallpaper) {
+                val input = contentResolver.openInputStream(Uri.parse(wallpaper))
+                val bitmap = input?.use { BitmapFactory.decodeStream(it) }
+                cachedWallpaper = bitmap?.let { BitmapDrawable(resources, it) }
+                cachedWallpaperUri = wallpaper
+            }
+            cachedWallpaper?.let { root.background = it }
+        } catch (_: Exception) { prefs.edit().remove("wallpaper").apply() }
         if (!overLimit) speedText.setTextColor(accentColor())
         progress.progressTintList = ColorStateList.valueOf(accentColor())
         progress.progressBackgroundTintList = ColorStateList.valueOf(0xFF2A3A52.toInt())
@@ -232,6 +271,8 @@ class MainActivity : Activity() {
         override fun run() {
             dateText.text = dateFormat.format(Date())
             refreshMedia()
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            if (prefs.getBoolean("nightAuto", false) && hour != lastThemeHour) applyTheme()
             handler.postDelayed(this, 1000)
         }
     }
@@ -369,7 +410,20 @@ class MainActivity : Activity() {
             "Bluetooth ayarları",
             "Ekran ve parlaklık ayarları",
             "Varsayılan ana ekran uygulaması",
-            "Sistem ayarları"
+            "Sistem ayarları",
+            "CarPlay / Zlink hızlı aç",
+            "Bağlantı durumu",
+            "Sürüş geçmişi",
+            "Park konumunu kaydet",
+            "Park konumunu haritada aç",
+            "Radyo uygulamasını seç / aç",
+            "Ses profili",
+            "Otomatik gece modu: " + (if (prefs.getBoolean("nightAuto", false)) "Açık" else "Kapalı"),
+            "Duvar kağıdı seç",
+            "Duvar kağıdını kaldır",
+            "Ekran koruyucu",
+            "Widget görünürlüğü",
+            "Araç verileri / OBD2 bilgisi"
         )
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle(R.string.settings_title)
@@ -432,7 +486,160 @@ class MainActivity : Activity() {
             11 -> openSettingsScreen(Settings.ACTION_DISPLAY_SETTINGS)
             12 -> openSettingsScreen(Settings.ACTION_HOME_SETTINGS)
             13 -> openSettingsScreen(Settings.ACTION_SETTINGS)
+            14 -> openCarPlay()
+            15 -> showConnectionStatus()
+            16 -> showTripHistory()
+            17 -> saveParkLocation()
+            18 -> openParkLocation()
+            19 -> openRadio()
+            20 -> showSoundProfiles()
+            21 -> { prefs.edit().putBoolean("nightAuto", !prefs.getBoolean("nightAuto", false)).apply(); applyTheme(); showSettings() }
+            22 -> pickWallpaper()
+            23 -> { prefs.edit().remove("wallpaper").apply(); cachedWallpaperUri = null; cachedWallpaper = null; root.background = null; applyTheme(); showSettings() }
+            24 -> showScreenSaver()
+            25 -> showWidgetOptions()
+            26 -> AlertDialog.Builder(this).setTitle("Araç verileri").setMessage("T100 Renault RZ CANBUS bilgilerine standart Android API üzerinden doğrudan erişilemiyor. Motor devri, yakıt ve arıza kodları için uyumlu OBD2 adaptörü veya üretici SDK gerekir. GPS hız ve yol verileri kullanılabilir.").setPositiveButton("Tamam", null).show()
         }
+    }
+
+
+    private fun archiveTrip() {
+        val history = org.json.JSONArray(prefs.getString("tripHistory", "[]"))
+        val item = JSONObject()
+        item.put("date", SimpleDateFormat("dd.MM.yyyy HH:mm", Locale("tr", "TR")).format(Date()))
+        item.put("km", tripKm.toDouble())
+        item.put("max", maxKmh)
+        item.put("seconds", drivingSeconds)
+        val updated = org.json.JSONArray().put(item)
+        for (i in 0 until minOf(49, history.length())) updated.put(history.get(i))
+        prefs.edit().putString("tripHistory", updated.toString()).apply()
+    }
+
+    private fun showTripHistory() {
+        val history = org.json.JSONArray(prefs.getString("tripHistory", "[]"))
+        val lines = (0 until history.length()).map { i ->
+            val trip = history.getJSONObject(i)
+            "${trip.optString("date")} · ${String.format(Locale.US, "%.1f", trip.optDouble("km"))} km · ${trip.optInt("max")} km/h"
+        }
+        AlertDialog.Builder(this).setTitle("Sürüş geçmişi").setMessage(
+            if (lines.isEmpty()) "Henüz kayıt yok. Gezi sayacını sıfırladığında yolculuk kaydedilir." else lines.joinToString("\n")
+        ).setPositiveButton("Tamam", null).show()
+    }
+
+    private fun saveParkLocation() {
+        val loc = lastLoc
+        if (loc == null) { Toast.makeText(this, "Önce GPS konumu bekleniyor", Toast.LENGTH_SHORT).show(); return }
+        prefs.edit().putString("park", "${loc.latitude},${loc.longitude}").apply()
+        Toast.makeText(this, "Park konumu kaydedildi", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openParkLocation() {
+        val coords = prefs.getString("park", null)
+        if (coords == null) { Toast.makeText(this, "Kayıtlı park konumu yok", Toast.LENGTH_SHORT).show(); return }
+        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$coords(Park)"))) }
+        catch (_: Exception) { Toast.makeText(this, "Harita uygulaması bulunamadı", Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun showConnectionStatus() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val info = if (Build.VERSION.SDK_INT >= 23) {
+            val cap = cm.getNetworkCapabilities(cm.activeNetwork)
+            when {
+                cap?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> "Wi-Fi bağlı"
+                cap?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "Mobil ağ bağlı"
+                cap?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> "Ethernet bağlı"
+                else -> "İnternet bağlantısı yok"
+            }
+        } else if (cm.activeNetworkInfo?.isConnected == true) "Ağ bağlı" else "Ağ bağlı değil"
+        AlertDialog.Builder(this).setTitle("Bağlantı durumu").setMessage(info + "\nCarPlay bağlantısı Zlink tarafından yönetilir; standart Android API bağlantı durumunu doğrulayamaz.").setPositiveButton("Tamam", null).show()
+    }
+
+    private fun openCarPlay() {
+        val saved = prefs.getString("carplay", null)
+        if (saved != null && launchPackage(saved)) return
+        showAppDialog("CarPlay uygulamasını seç (Zlink)", queryApps()) { chosen ->
+            chosen.pkg?.let { prefs.edit().putString("carplay", it).apply(); launchPackage(it) }
+        }
+    }
+
+    private fun openRadio() {
+        val saved = prefs.getString("radio", null)
+        if (saved != null && launchPackage(saved)) return
+        showAppDialog("Radyo uygulamasını seç", queryApps()) { chosen ->
+            chosen.pkg?.let { prefs.edit().putString("radio", it).apply(); launchPackage(it) }
+        }
+    }
+
+    private fun showSoundProfiles() {
+        val names = arrayOf("Sessiz (%15)", "Normal (%50)", "Yüksek (%80)")
+        AlertDialog.Builder(this).setTitle("Ses profili").setItems(names) { _, index ->
+            try {
+                val am = audio()
+                val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, (max * intArrayOf(15, 50, 80)[index] / 100).coerceAtLeast(1), 0)
+            } catch (_: Exception) { Toast.makeText(this, "Ses seviyesi MCU tarafından yönetiliyor olabilir", Toast.LENGTH_SHORT).show() }
+        }.show()
+    }
+
+    private fun pickWallpaper() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        try { startActivityForResult(intent, REQ_WALLPAPER) }
+        catch (_: Exception) { Toast.makeText(this, "Resim seçici açılamadı", Toast.LENGTH_SHORT).show() }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_WALLPAPER && resultCode == RESULT_OK) {
+            val uri = data?.data ?: return
+            try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+            prefs.edit().putString("wallpaper", uri.toString()).apply()
+            applyTheme()
+        }
+    }
+
+    private fun showWidgetOptions() {
+        val names = arrayOf("Hava durumu", "Medya paneli", "GPS hız paneli")
+        val ids = intArrayOf(R.id.weather, R.id.mediaCard, R.id.speedCard)
+        val checked = ids.map { findViewById<View>(it).visibility == View.VISIBLE }.toBooleanArray()
+        AlertDialog.Builder(this).setTitle("Widget düzenleme").setMultiChoiceItems(names, checked) { _, which, value ->
+            prefs.edit().putBoolean("widget$which", value).apply()
+            findViewById<View>(ids[which]).visibility = if (value) View.VISIBLE else View.GONE
+        }.setPositiveButton("Tamam", null).show()
+    }
+
+    private fun showScreenSaver() {
+        val view = TextClock(this).apply {
+            format24Hour = "HH:mm"
+            format12Hour = "h:mm a"
+            textSize = 90f
+            setTextColor(android.graphics.Color.WHITE)
+            gravity = android.view.Gravity.CENTER
+            setBackgroundColor(0xFF05080E.toInt())
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_Material_NoActionBar_Fullscreen)
+            .setView(view).setPositiveButton("Kapat", null).show()
+    }
+
+    private fun showQuickActions() {
+        val actions = arrayOf("CarPlay / Zlink", "Radyo", "Uygulamalar", "Bağlantı durumu", "Park konumunu kaydet", "Park konumunu aç", "Sürüş geçmişi", "Ekran koruyucu", "Ayarlar")
+        AlertDialog.Builder(this).setTitle("Hızlı erişim").setItems(actions) { _, index ->
+            when (index) {
+                0 -> openCarPlay()
+                1 -> openRadio()
+                2 -> showAllApps()
+                3 -> showConnectionStatus()
+                4 -> saveParkLocation()
+                5 -> openParkLocation()
+                6 -> showTripHistory()
+                7 -> showScreenSaver()
+                8 -> showSettings()
+            }
+        }.show()
     }
 
     // ---------------------------------------------------------------- ses ve asistan
@@ -556,13 +763,29 @@ class MainActivity : Activity() {
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            if (location.hasAccuracy() && location.accuracy > 60f) {
+                gpsStatus.text = "GPS sinyali zayıf"
+                return
+            }
             val kmhF = if (location.hasSpeed()) location.speed * 3.6f else 0f
             val kmh = if (kmhF < 2f) 0 else kmhF.roundToInt()
+            if (kmh >= 3 && driveStartedAt == 0L) driveStartedAt = SystemClock.elapsedRealtime()
+            if (kmh < 3 && driveStartedAt != 0L) {
+                drivingSeconds += ((SystemClock.elapsedRealtime() - driveStartedAt) / 1000L).coerceAtLeast(0L)
+                driveStartedAt = 0L
+            }
             speedText.text = kmh.toString()
             if (kmh > maxKmh) maxKmh = kmh
 
             val prev = lastLoc
-            if (prev != null && kmh >= 3) tripKm += prev.distanceTo(location) / 1000f
+            if (prev != null) {
+                val elapsed = (location.elapsedRealtimeNanos - prev.elapsedRealtimeNanos) / 1_000_000_000.0
+                val distance = prev.distanceTo(location)
+                val plausible = elapsed > 0.0 && elapsed <= 15.0 && distance >= 3f &&
+                    distance / elapsed <= 65.0 &&
+                    (!location.hasAccuracy() || distance > location.accuracy * 0.5f)
+                if (plausible && kmh >= 3) tripKm += distance / 1000f
+            }
             lastLoc = location
 
             if (kmh >= 5 && location.hasBearing()) {
@@ -589,12 +812,17 @@ class MainActivity : Activity() {
     }
 
     private fun updateTripText() {
-        tripText.text = "Gezi " + String.format(Locale.US, "%.1f", tripKm) + " km · Maks $maxKmh km/h"
+        val seconds = drivingSeconds + if (driveStartedAt != 0L) (SystemClock.elapsedRealtime() - driveStartedAt) / 1000L else 0L
+        tripText.text = "Gezi " + String.format(Locale.US, "%.1f", tripKm) + " km · Maks $maxKmh km/h · ${seconds / 60} dk"
     }
 
     private fun resetTrip() {
+        if (tripKm > 0.05f) archiveTrip()
         tripKm = 0f
+        drivingSeconds = 0L
+        driveStartedAt = 0L
         maxKmh = 0
+        lastLoc = null
         prefs.edit().putFloat("trip", 0f).putInt("max", 0).apply()
         updateTripText()
     }
