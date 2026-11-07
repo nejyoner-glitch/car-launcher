@@ -147,9 +147,15 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.btnPrev).setOnClickListener { mediaPrev() }
         findViewById<View>(R.id.btnNext).setOnClickListener { mediaNext() }
         btnPlay.setOnClickListener { mediaPlayPause() }
+        findViewById<View>(R.id.navHome).setOnClickListener { showQuickActions() }
+        findViewById<View>(R.id.navCarplay).setOnClickListener { openCarPlay() }
+        findViewById<View>(R.id.navMedia).setOnClickListener { showAllApps() }
+        findViewById<View>(R.id.navVehicle).setOnClickListener { showVehicleMenu() }
+        findViewById<View>(R.id.navApps).setOnClickListener { showAllApps() }
+        findViewById<View>(R.id.navSettings).setOnClickListener { showSettings() }
         findViewById<View>(R.id.quickCarPlay).setOnClickListener { openCarPlay() }
         findViewById<View>(R.id.quickRadio).setOnClickListener { openRadio() }
-        findViewById<View>(R.id.quickNav).setOnClickListener { openNavigation() }
+        findViewById<View>(R.id.quickNav).setOnClickListener { showVehicleMenu() }
         findViewById<View>(R.id.btnAllApps).setOnClickListener { showAllApps() }
         findViewById<View>(R.id.btnAllApps).setOnLongClickListener { showQuickActions(); true }
         clock.setOnClickListener { showQuickActions() }
@@ -563,6 +569,21 @@ class MainActivity : Activity() {
         showAppDialog("CarPlay uygulamasını seç (Zlink)", queryApps()) { chosen ->
             chosen.pkg?.let { prefs.edit().putString("carplay", it).apply(); launchPackage(it) }
         }
+    }
+
+    private fun showVehicleMenu() {
+        val entries = arrayOf("Yol bilgisayarı", "Sürüş geçmişi", "Park konumu kaydet", "Park konumunu aç", "Araç verileri hakkında")
+        AlertDialog.Builder(this).setTitle("Clio 4 · 20 ASZ 083").setItems(entries) { _, which ->
+            when (which) {
+                0 -> AlertDialog.Builder(this).setTitle("Yol bilgisayarı").setMessage(
+                    "Mesafe: " + String.format(Locale.US, "%.1f", tripKm) + " km\\nMaksimum hız: $maxKmh km/sa\\nSürüş: ${drivingSeconds / 60} dk"
+                ).setPositiveButton("Tamam", null).show()
+                1 -> showTripHistory()
+                2 -> saveParkLocation()
+                3 -> openParkLocation()
+                4 -> AlertDialog.Builder(this).setTitle("Araç verileri").setMessage("GPS ile hız ve yolculuk verileri kullanılabilir. Yakıt, motor devri ve sıcaklık için uyumlu OBD2 veya üretici CANBUS entegrasyonu gerekir.").setPositiveButton("Tamam", null).show()
+            }
+        }.show()
     }
 
     private fun openNavigation() {
