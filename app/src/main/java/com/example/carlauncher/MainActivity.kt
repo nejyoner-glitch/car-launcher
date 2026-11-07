@@ -95,6 +95,7 @@ class MainActivity : Activity() {
 
     private var locationManager: LocationManager? = null
     private var lastLoc: Location? = null
+    private var pendingAutostart: Runnable? = null
     private var tripKm = 0f
     private var maxKmh = 0
     private var overLimit = false
@@ -160,10 +161,13 @@ class MainActivity : Activity() {
         requestLocationIfNeeded()
 
         // Açılışta seçili uygulamayı (ör. Zlink) bir kez otomatik başlat.
-        if (savedInstanceState == null && !autoStarted && SystemClock.elapsedRealtime() < 3 * 60 * 1000) {
-            autoStarted = true
+        if (savedInstanceState == null && !autoStarted) {
             val pkg = prefs.getString("autostart", null)
-            if (pkg != null) handler.postDelayed({ launchPackage(pkg) }, 3000)
+            if (pkg != null) {
+                autoStarted = true
+                pendingAutostart = Runnable { launchPackage(pkg); pendingAutostart = null }
+                handler.postDelayed(pendingAutostart!!, 3000)
+            }
         }
     }
 
@@ -179,11 +183,14 @@ class MainActivity : Activity() {
         super.onPause()
         stopLocation()
         handler.removeCallbacks(tick)
+        pendingAutostart?.let { handler.removeCallbacks(it) }
+        pendingAutostart = null
         prefs.edit().putFloat("trip", tripKm).putInt("max", maxKmh).apply()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
         tone?.release()
         tone = null
     }
@@ -556,13 +563,24 @@ class MainActivity : Activity() {
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            if (location.hasAccuracy() && location.accuracy > 60f) {
+                gpsStatus.text = "GPS sinyali zayıf"
+                return
+            }
             val kmhF = if (location.hasSpeed()) location.speed * 3.6f else 0f
             val kmh = if (kmhF < 2f) 0 else kmhF.roundToInt()
             speedText.text = kmh.toString()
             if (kmh > maxKmh) maxKmh = kmh
 
             val prev = lastLoc
-            if (prev != null && kmh >= 3) tripKm += prev.distanceTo(location) / 1000f
+            if (prev != null) {
+                val elapsed = (location.elapsedRealtimeNanos - prev.elapsedRealtimeNanos) / 1_000_000_000.0
+                val distance = prev.distanceTo(location)
+                val plausible = elapsed > 0.0 && elapsed <= 15.0 && distance >= 3f &&
+                    distance / elapsed <= 65.0 &&
+                    (!location.hasAccuracy() || distance > location.accuracy * 0.5f)
+                if (plausible && kmh >= 3) tripKm += distance / 1000f
+            }
             lastLoc = location
 
             if (kmh >= 5 && location.hasBearing()) {
@@ -595,6 +613,7 @@ class MainActivity : Activity() {
     private fun resetTrip() {
         tripKm = 0f
         maxKmh = 0
+        lastLoc = null
         prefs.edit().putFloat("trip", 0f).putInt("max", 0).apply()
         updateTripText()
     }
