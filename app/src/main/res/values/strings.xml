@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Araç Launcher</string>
+    <string name="kmh">km/h</string>
+    <string name="no_media">Çalan medya yok</string>
+    <string name="media_access">Medya bilgisi için dokun ve izin ver</string>
+    <string name="add_shortcut">Ekle</string>
+    <string name="all_apps">Tüm uygulamalar</string>
+    <string name="pick_app">Uygulama seç</string>
+    <string name="remove_shortcut">— Kısayolu kaldır —</string>
+    <string name="gps_waiting">GPS bekleniyor</string>
+</resources>
