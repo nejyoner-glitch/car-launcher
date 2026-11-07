@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:padding="28dp">
+    android:padding="18dp">
 
     <!-- Sol: saat, tarih, hız, hava -->
     <LinearLayout
@@ -21,7 +21,7 @@
             android:format12Hour="HH:mm"
             android:format24Hour="HH:mm"
             android:textColor="#FFFFFF"
-            android:textSize="96sp"
+            android:textSize="76sp"
             android:textStyle="bold" />
 
         <TextView
@@ -35,7 +35,7 @@
             android:id="@+id/speedCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/bg_card"
             android:clickable="true"
             android:focusable="true"
@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:text="0"
                     android:textColor="#4FC3F7"
-                    android:textSize="64sp"
+                    android:textSize="56sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -110,7 +110,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_marginStart="28dp"
+        android:layout_marginStart="16dp"
         android:layout_weight="1.5"
         android:orientation="vertical">
 
@@ -122,12 +122,12 @@
             android:background="@drawable/bg_card"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="20dp">
+            android:padding="12dp">
 
             <ImageView
                 android:id="@+id/art"
-                android:layout_width="96dp"
-                android:layout_height="96dp"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
                 android:padding="24dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_music" />
@@ -135,7 +135,7 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="18dp"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -147,7 +147,7 @@
                     android:maxLines="1"
                     android:text="@string/no_media"
                     android:textColor="#FFFFFF"
-                    android:textSize="24sp"
+                    android:textSize="21sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -172,8 +172,8 @@
 
             <ImageButton
                 android:id="@+id/btnPrev"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
                 android:background="@drawable/bg_round_btn"
                 android:contentDescription="Önceki"
                 android:padding="18dp"
@@ -181,10 +181,10 @@
 
             <ImageButton
                 android:id="@+id/btnPlay"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:layout_marginStart="12dp"
-                android:layout_marginEnd="12dp"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
                 android:background="@drawable/bg_round_btn"
                 android:contentDescription="Oynat / Duraklat"
                 android:padding="20dp"
