@@ -9,6 +9,12 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.Environment
+import android.content.pm.PackageInfo
+import java.util.concurrent.Executors
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.widget.FrameLayout
@@ -104,6 +110,34 @@ class MainActivity : Activity() {
     private var locationManager: LocationManager? = null
     private var lastLoc: Location? = null
     private var pendingAutostart: Runnable? = null
+    private var updateDownloadId = -1L
+    private var lastUpdateCheck = 0L
+    private val updateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (id != updateDownloadId || id < 0) return
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val cursor = dm.query(DownloadManager.Query().setFilterById(id))
+            cursor?.use {
+                if (!it.moveToFirst()) return
+                val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    val uri = dm.getUriForDownloadedFile(id) ?: return
+                    val install = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/vnd.android.package-archive")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    try { startActivity(install) }
+                    catch (_: Exception) {
+                        Toast.makeText(this@MainActivity, "Kurulum açılamadı. İndirilenler'den APK'yı açın.", Toast.LENGTH_LONG).show()
+                    }
+                } else if (status == DownloadManager.STATUS_FAILED) {
+                    Toast.makeText(this@MainActivity, "Güncelleme indirilemedi", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private var tripKm = 0f
     private var maxKmh = 0
     private var driveStartedAt = 0L
@@ -186,6 +220,7 @@ class MainActivity : Activity() {
         val widgetIds = intArrayOf(R.id.weather, R.id.mediaCard, R.id.speedCard)
         widgetIds.forEachIndexed { index, id -> if (!prefs.getBoolean("widget$index", true)) findViewById<View>(id).visibility = View.GONE }
         applyTheme()
+        registerReceiver(updateReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
         updateTripText()
         requestLocationIfNeeded()
 
@@ -206,6 +241,7 @@ class MainActivity : Activity() {
         applyTheme()
         startLocation()
         handler.post(tick)
+        if (System.currentTimeMillis() - lastUpdateCheck > 6 * 60 * 60 * 1000L) checkForUpdates(false)
     }
 
     override fun onPause() {
@@ -220,6 +256,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
+        try { unregisterReceiver(updateReceiver) } catch (_: Exception) {}
         tone?.release()
         tone = null
     }
@@ -432,7 +469,8 @@ class MainActivity : Activity() {
             "Duvar kağıdını kaldır",
             "Ekran koruyucu",
             "Widget görünürlüğü",
-            "Araç verileri / OBD2 bilgisi"
+            "Araç verileri / OBD2 bilgisi",
+            "Güncellemeleri kontrol et"
         )
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle(R.string.settings_title)
@@ -507,6 +545,7 @@ class MainActivity : Activity() {
             23 -> { prefs.edit().remove("wallpaper").apply(); cachedWallpaperUri = null; cachedWallpaper = null; root.background = null; applyTheme(); showSettings() }
             24 -> showScreenSaver()
             25 -> showWidgetOptions()
+            27 -> checkForUpdates(true)
             26 -> AlertDialog.Builder(this).setTitle("Araç verileri").setMessage("T100 Renault RZ CANBUS bilgilerine standart Android API üzerinden doğrudan erişilemiyor. Motor devri, yakıt ve arıza kodları için uyumlu OBD2 adaptörü veya üretici SDK gerekir. GPS hız ve yol verileri kullanılabilir.").setPositiveButton("Tamam", null).show()
         }
     }
@@ -655,6 +694,67 @@ class MainActivity : Activity() {
         }
         AlertDialog.Builder(this, android.R.style.Theme_Material_NoActionBar_Fullscreen)
             .setView(view).setPositiveButton("Kapat", null).show()
+    }
+
+    private fun checkForUpdates(manual: Boolean) {
+        lastUpdateCheck = System.currentTimeMillis()
+        Executors.newSingleThreadExecutor().execute {
+            try {
+                val url = URL("https://api.github.com/repos/nejyoner-glitch/car-launcher/releases/latest")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 7000
+                conn.readTimeout = 7000
+                conn.setRequestProperty("Accept", "application/vnd.github+json")
+                conn.setRequestProperty("User-Agent", "T100-CarLauncher")
+                val json = conn.inputStream.bufferedReader().use { JSONObject(it.readText()) }
+                conn.disconnect()
+                val tag = json.optString("tag_name")
+                val published = json.optString("published_at")
+                val assets = json.optJSONArray("assets")
+                var apkUrl: String? = null
+                for (i in 0 until (assets?.length() ?: 0)) {
+                    val asset = assets!!.getJSONObject(i)
+                    if (asset.optString("name").endsWith(".apk", true)) {
+                        apkUrl = asset.optString("browser_download_url")
+                        break
+                    }
+                }
+                val seen = prefs.getString("updateSeen", "")
+                runOnUiThread {
+                    if (apkUrl != null && published.isNotEmpty() && published != seen) {
+                        val downloadUrl = apkUrl!!
+                        AlertDialog.Builder(this).setTitle("Launcher güncellemesi")
+                            .setMessage("GitHub'da $tag sürümü bulundu. APK indirilip Android kurulum ekranı açılacak. Kurulum için onay vermen gerekir.\\n\\nNot: APK aynı imza ile üretilmiş olmalı.")
+                            .setPositiveButton("İndir") { _, _ ->
+                                prefs.edit().putString("updateSeen", published).apply()
+                                downloadUpdate(downloadUrl)
+                            }
+                            .setNegativeButton("Sonra") { _, _ ->
+                                prefs.edit().putString("updateSeen", published).apply()
+                            }.show()
+                    } else if (manual) {
+                        Toast.makeText(this, "Yeni bir güncelleme bulunamadı", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (_: Exception) {
+                if (manual) runOnUiThread { Toast.makeText(this, "Güncelleme kontrol edilemedi", Toast.LENGTH_SHORT).show() }
+            }
+        }
+    }
+
+    private fun downloadUpdate(url: String) {
+        try {
+            val request = DownloadManager.Request(Uri.parse(url))
+                .setTitle("Car Launcher güncellemesi")
+                .setDescription("APK indiriliyor")
+                .setMimeType("application/vnd.android.package-archive")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "car-launcher-update.apk")
+            updateDownloadId = (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+            Toast.makeText(this, "Güncelleme indiriliyor", Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "İndirme başlatılamadı", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun showQuickActions() {
