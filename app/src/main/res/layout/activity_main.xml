@@ -4,13 +4,44 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:padding="18dp">
+    android:padding="12dp">
+
+    <!-- Sol navigasyon: büyük dokunmatik hedefler -->
+    <LinearLayout
+        android:layout_width="104dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="12dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="7dp">
+        <TextView android:layout_width="match_parent" android:layout_height="60dp"
+            android:gravity="center" android:text="CLIO 4" android:textColor="#FFFFFF"
+            android:textStyle="bold" android:textSize="19sp"/>
+        <TextView android:id="@+id/navHome" android:layout_width="match_parent"
+            android:layout_height="66dp" android:gravity="center" android:text="⌂  Ana"
+            android:textColor="#69D7FF" android:textSize="18sp" android:background="@drawable/bg_round_btn"/>
+        <TextView android:id="@+id/navCarplay" android:layout_width="match_parent"
+            android:layout_height="66dp" android:gravity="center" android:text="CarPlay"
+            android:textColor="#FFFFFF" android:textSize="16sp"/>
+        <TextView android:id="@+id/navMedia" android:layout_width="match_parent"
+            android:layout_height="66dp" android:gravity="center" android:text="Müzik"
+            android:textColor="#FFFFFF" android:textSize="17sp"/>
+        <TextView android:id="@+id/navVehicle" android:layout_width="match_parent"
+            android:layout_height="66dp" android:gravity="center" android:text="Araç"
+            android:textColor="#FFFFFF" android:textSize="17sp"/>
+        <TextView android:id="@+id/navApps" android:layout_width="match_parent"
+            android:layout_height="66dp" android:gravity="center" android:text="Uygulama"
+            android:textColor="#FFFFFF" android:textSize="15sp"/>
+        <TextView android:id="@+id/navSettings" android:layout_width="match_parent"
+            android:layout_height="66dp" android:gravity="center" android:text="Ayarlar"
+            android:textColor="#FFFFFF" android:textSize="17sp"/>
+    </LinearLayout>
 
     <!-- Sol: saat, tarih, hız, hava -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1"
+        android:layout_weight="1.05"
         android:gravity="center_vertical"
         android:orientation="vertical">
 
@@ -21,7 +52,7 @@
             android:format12Hour="HH:mm"
             android:format24Hour="HH:mm"
             android:textColor="#FFFFFF"
-            android:textSize="76sp"
+            android:textSize="62sp"
             android:textStyle="bold" />
 
         <TextView
@@ -54,7 +85,7 @@
                     android:layout_height="wrap_content"
                     android:text="0"
                     android:textColor="#4FC3F7"
-                    android:textSize="56sp"
+                    android:textSize="44sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -108,7 +139,7 @@
         <!-- T100 premium cockpit: quick-access dock -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="58dp"
             android:layout_marginTop="12dp"
             android:orientation="horizontal">
             <TextView
@@ -147,7 +178,7 @@
                 android:gravity="center"
                 android:clickable="true"
                 android:focusable="true"
-                android:text="Harita"
+                android:text="Araç"
                 android:textColor="#FFFFFF"
                 android:textSize="15sp"/>
         </LinearLayout>
@@ -157,15 +188,15 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_marginStart="16dp"
-        android:layout_weight="1.5"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1.7"
         android:orientation="vertical">
 
         <LinearLayout
             android:id="@+id/mediaCard"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.9"
+            android:layout_weight="1.15"
             android:background="@drawable/bg_card"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -173,9 +204,9 @@
 
             <ImageView
                 android:id="@+id/art"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:padding="24dp"
+                android:layout_width="104dp"
+                android:layout_height="104dp"
+                android:padding="8dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_music" />
 
