@@ -1,13 +1,1 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="#40FFFFFF">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#E0132032" />
-            <corners android:radius="18dp" />
-            <stroke
-                android:width="1dp"
-                android:color="#335B8DAA" />
-        </shape>
-    </item>
-</ripple>
+<?xml version="1.0" encoding="utf-8"?><ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#22FFFFFF"><item><shape android:shape="rectangle"><gradient android:angle="270" android:startColor="#E7111A29" android:endColor="#EE090E18"/><corners android:radius="18dp"/><stroke android:width="1dp" android:color="#38526A84"/></shape></item></ripple>
