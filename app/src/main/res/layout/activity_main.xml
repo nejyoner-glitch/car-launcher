@@ -1,382 +1,199 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:padding="12dp">
-
-    <!-- Sol navigasyon: büyük dokunmatik hedefler -->
-    <LinearLayout
-        android:layout_width="104dp"
-        android:layout_height="match_parent"
-        android:layout_marginEnd="12dp"
-        android:orientation="vertical"
-        android:background="@drawable/bg_card"
-        android:padding="7dp">
-        <TextView android:layout_width="match_parent" android:layout_height="60dp"
+    android:id="@+id/root" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:orientation="horizontal"
+    android:background="#080F1C" android:padding="12dp">
+    <LinearLayout android:layout_width="92dp" android:layout_height="match_parent"
+        android:layout_marginEnd="12dp" android:background="@drawable/bg_card"
+        android:orientation="vertical" android:padding="5dp">
+        <TextView android:layout_width="match_parent" android:layout_height="56dp"
             android:gravity="center" android:text="CLIO 4" android:textColor="#FFFFFF"
-            android:textStyle="bold" android:textSize="19sp"/>
+            android:textSize="17sp" android:textStyle="bold"/>
         <TextView android:id="@+id/navHome" android:layout_width="match_parent"
-            android:layout_height="66dp" android:gravity="center" android:text="⌂  Ana"
-            android:textColor="#69D7FF" android:textSize="18sp" android:background="@drawable/bg_round_btn"/>
+            android:layout_height="64dp" android:gravity="center" android:text="⌂\nAna"
+            android:textColor="#66CEFF" android:textSize="16sp" android:background="@drawable/bg_round_btn"/>
         <TextView android:id="@+id/navCarplay" android:layout_width="match_parent"
-            android:layout_height="66dp" android:gravity="center" android:text="CarPlay"
-            android:textColor="#FFFFFF" android:textSize="16sp"/>
-        <TextView android:id="@+id/navMedia" android:layout_width="match_parent"
-            android:layout_height="66dp" android:gravity="center" android:text="Müzik"
-            android:textColor="#FFFFFF" android:textSize="17sp"/>
-        <TextView android:id="@+id/navVehicle" android:layout_width="match_parent"
-            android:layout_height="66dp" android:gravity="center" android:text="Araç"
-            android:textColor="#FFFFFF" android:textSize="17sp"/>
-        <TextView android:id="@+id/navApps" android:layout_width="match_parent"
-            android:layout_height="66dp" android:gravity="center" android:text="Uygulama"
+            android:layout_height="64dp" android:gravity="center" android:text="CarPlay"
             android:textColor="#FFFFFF" android:textSize="15sp"/>
+        <TextView android:id="@+id/navMedia" android:layout_width="match_parent"
+            android:layout_height="64dp" android:gravity="center" android:text="Müzik"
+            android:textColor="#FFFFFF" android:textSize="16sp"/>
+        <TextView android:id="@+id/navVehicle" android:layout_width="match_parent"
+            android:layout_height="64dp" android:gravity="center" android:text="Araç"
+            android:textColor="#FFFFFF" android:textSize="16sp"/>
+        <TextView android:id="@+id/navApps" android:layout_width="match_parent"
+            android:layout_height="64dp" android:gravity="center" android:text="Uygulamalar"
+            android:textColor="#FFFFFF" android:textSize="13sp"/>
         <TextView android:id="@+id/navSettings" android:layout_width="match_parent"
-            android:layout_height="66dp" android:gravity="center" android:text="Ayarlar"
-            android:textColor="#FFFFFF" android:textSize="17sp"/>
+            android:layout_height="64dp" android:gravity="center" android:text="Ayarlar"
+            android:textColor="#FFFFFF" android:textSize="16sp"/>
     </LinearLayout>
-
-    <!-- Sol: saat, tarih, hız, hava -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1.05"
-        android:gravity="center_vertical"
-        android:orientation="vertical">
-
-        <TextClock
-            android:id="@+id/clock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:format12Hour="HH:mm"
-            android:format24Hour="HH:mm"
-            android:textColor="#FFFFFF"
-            android:textSize="62sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/date"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#9FB3CE"
-            android:textSize="22sp" />
-
-        <LinearLayout
-            android:id="@+id/speedCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_card"
-            android:clickable="true"
-            android:focusable="true"
-            android:orientation="vertical"
-            android:padding="18dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/speed"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#4FC3F7"
-                    android:textSize="44sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/kmh"
-                    android:textColor="#9FB3CE"
-                    android:textSize="20sp" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/heading"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="—"
-                    android:textColor="#FFFFFF"
-                    android:textSize="30sp"
-                    android:textStyle="bold" />
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+        android:layout_weight="1" android:orientation="vertical">
+        <!-- Quiet status header -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="110dp"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:gravity="center_vertical" android:orientation="vertical">
+                <TextClock android:id="@+id/clock" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:format12Hour="h:mm a"
+                    android:format24Hour="HH:mm" android:textColor="#FFFFFF"
+                    android:textSize="59sp" android:textStyle="bold" android:includeFontPadding="false"/>
+                <TextView android:id="@+id/date" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textColor="#98AFC9" android:textSize="16sp"/>
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/trip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="#B8C7DC"
-                android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/gpsStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/gps_waiting"
-                android:textColor="#6E83A0"
-                android:textSize="13sp" />
+            <TextView android:id="@+id/weather" android:layout_width="wrap_content"
+                android:layout_height="70dp" android:minWidth="170dp"
+                android:gravity="center" android:padding="12dp"
+                android:background="@drawable/bg_card" android:textColor="#E6EDF7"
+                android:textSize="17sp"/>
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/weather"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:textColor="#E6EDF7"
-            android:textSize="20sp" />
-
-        <!-- T100 premium cockpit: quick-access dock -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal">
-            <TextView
-                android:id="@+id/quickCarPlay"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_marginEnd="5dp"
-                android:background="@drawable/bg_card"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true"
-                android:text="CarPlay"
-                android:textColor="#72D8FF"
-                android:textSize="15sp"
-                android:textStyle="bold"/>
-            <TextView
-                android:id="@+id/quickRadio"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_marginEnd="5dp"
-                android:background="@drawable/bg_card"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true"
-                android:text="Radyo"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"/>
-            <TextView
-                android:id="@+id/quickNav"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@drawable/bg_card"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true"
-                android:text="Araç"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"/>
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- Sağ: medya, kısayollar, alt çubuk -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_marginStart="12dp"
-        android:layout_weight="1.7"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:id="@+id/mediaCard"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1.15"
-            android:background="@drawable/bg_card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="12dp">
-
-            <ImageView
-                android:id="@+id/art"
-                android:layout_width="104dp"
-                android:layout_height="104dp"
-                android:padding="8dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_music" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:layout_weight="1"
+        <!-- Two clear primary cards, no map -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1" android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="0.9" android:layout_marginEnd="10dp"
                 android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/no_media"
-                    android:textColor="#FFFFFF"
-                    android:textSize="21sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/artist"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="#9FB3CE"
-                    android:textSize="17sp" />
-
-                <ProgressBar
-                    android:id="@+id/progress"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="6dp"
-                    android:layout_marginTop="10dp"
-                    android:max="1000"
-                    android:progress="0"
-                    android:visibility="invisible" />
+                <LinearLayout android:id="@+id/speedCard" android:layout_width="match_parent"
+                    android:layout_height="0dp" android:layout_weight="1"
+                    android:background="@drawable/bg_card" android:orientation="vertical"
+                    android:gravity="center_vertical" android:padding="16dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="YOL BİLGİSAYARI" android:textColor="#89A6C7"
+                        android:textSize="13sp" android:textStyle="bold"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:id="@+id/speed" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="0"
+                            android:textColor="#64CEFF" android:textSize="64sp"
+                            android:textStyle="bold" android:includeFontPadding="false"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="7dp" android:text="@string/kmh"
+                            android:textColor="#B6C8DC" android:textSize="17sp"/>
+                        <View android:layout_width="0dp" android:layout_height="1dp"
+                            android:layout_weight="1"/>
+                        <TextView android:id="@+id/heading" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="—"
+                            android:textColor="#FFFFFF" android:textSize="24sp"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/trip" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:textColor="#D3DEEC"
+                        android:textSize="15sp" android:maxLines="2"/>
+                    <TextView android:id="@+id/gpsStatus" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                        android:text="@string/gps_waiting" android:textColor="#8199B6"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="64dp"
+                    android:layout_marginTop="10dp" android:orientation="horizontal">
+                    <TextView android:id="@+id/quickCarPlay" android:layout_width="0dp"
+                        android:layout_height="match_parent" android:layout_weight="1"
+                        android:layout_marginEnd="6dp" android:background="@drawable/bg_card"
+                        android:gravity="center" android:text="CarPlay" android:textStyle="bold"
+                        android:textColor="#65D6FF" android:textSize="17sp"/>
+                    <TextView android:id="@+id/quickRadio" android:layout_width="0dp"
+                        android:layout_height="match_parent" android:layout_weight="1"
+                        android:layout_marginEnd="6dp" android:background="@drawable/bg_card"
+                        android:gravity="center" android:text="Radyo"
+                        android:textColor="#FFFFFF" android:textSize="17sp"/>
+                    <TextView android:id="@+id/quickNav" android:layout_width="0dp"
+                        android:layout_height="match_parent" android:layout_weight="1"
+                        android:background="@drawable/bg_card" android:gravity="center"
+                        android:text="Araç" android:textColor="#FFFFFF" android:textSize="17sp"/>
+                </LinearLayout>
             </LinearLayout>
-
-            <ImageButton
-                android:id="@+id/btnPrev"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Önceki"
-                android:padding="18dp"
-                android:src="@drawable/ic_prev" />
-
-            <ImageButton
-                android:id="@+id/btnPlay"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginStart="6dp"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Oynat / Duraklat"
-                android:padding="20dp"
-                android:src="@drawable/ic_play" />
-
-            <ImageButton
-                android:id="@+id/btnNext"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Sonraki"
-                android:padding="18dp"
-                android:src="@drawable/ic_next" />
+            <LinearLayout android:id="@+id/mediaCard" android:layout_width="0dp"
+                android:layout_height="match_parent" android:layout_weight="1.2"
+                android:background="@drawable/bg_card" android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="ŞİMDİ ÇALIYOR" android:textColor="#89A6C7"
+                    android:textSize="13sp" android:textStyle="bold"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageView android:id="@+id/art" android:layout_width="112dp"
+                        android:layout_height="112dp" android:src="@drawable/ic_music"
+                        android:scaleType="centerCrop" android:contentDescription="Albüm kapağı"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:layout_marginStart="16dp"
+                        android:orientation="vertical">
+                        <TextView android:id="@+id/title" android:layout_width="match_parent"
+                            android:layout_height="wrap_content" android:text="@string/no_media"
+                            android:textColor="#FFFFFF" android:textSize="22sp"
+                            android:textStyle="bold" android:maxLines="2" android:ellipsize="end"/>
+                        <TextView android:id="@+id/artist" android:layout_width="match_parent"
+                            android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                            android:textColor="#A8BCD5" android:textSize="17sp"
+                            android:maxLines="1" android:ellipsize="end"/>
+                        <ProgressBar android:id="@+id/progress"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent" android:layout_height="5dp"
+                            android:layout_marginTop="14dp" android:max="1000"
+                            android:visibility="invisible"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="72dp"
+                    android:gravity="center" android:orientation="horizontal">
+                    <ImageButton android:id="@+id/btnPrev" android:layout_width="68dp"
+                        android:layout_height="68dp" android:background="@drawable/bg_round_btn"
+                        android:src="@drawable/ic_prev" android:padding="20dp"
+                        android:contentDescription="Önceki"/>
+                    <ImageButton android:id="@+id/btnPlay" android:layout_width="72dp"
+                        android:layout_height="72dp" android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp" android:background="@drawable/bg_round_btn"
+                        android:src="@drawable/ic_play" android:padding="21dp"
+                        android:contentDescription="Oynat / Duraklat"/>
+                    <ImageButton android:id="@+id/btnNext" android:layout_width="68dp"
+                        android:layout_height="68dp" android:background="@drawable/bg_round_btn"
+                        android:src="@drawable/ic_next" android:padding="20dp"
+                        android:contentDescription="Sonraki"/>
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/row1"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="14dp"
-            android:layout_weight="1"
-            android:orientation="horizontal" />
-
-        <LinearLayout
-            android:id="@+id/row2"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal" />
-
-        <!-- Alt çubuk -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
+        <!-- Favorite applications -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="118dp"
+            android:layout_marginTop="10dp" android:orientation="vertical">
+            <LinearLayout android:id="@+id/row1" android:layout_width="match_parent"
+                android:layout_height="0dp" android:layout_weight="1"
+                android:orientation="horizontal"/>
+            <LinearLayout android:id="@+id/row2" android:layout_width="match_parent"
+                android:layout_height="0dp" android:layout_weight="1"
+                android:orientation="horizontal" android:visibility="gone"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="62dp"
+            android:layout_marginTop="8dp" android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <LinearLayout
-                android:id="@+id/btnAllApps"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="6dp"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_card"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
+            <LinearLayout android:id="@+id/btnAllApps" android:layout_width="0dp"
+                android:layout_height="match_parent" android:layout_weight="1"
+                android:background="@drawable/bg_card" android:gravity="center"
                 android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_apps" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="@string/all_apps"
-                    android:textColor="#E6EDF7"
-                    android:textSize="17sp" />
+                <ImageView android:layout_width="26dp" android:layout_height="26dp"
+                    android:src="@drawable/ic_apps"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" android:text="@string/all_apps"
+                    android:textColor="#FFFFFF" android:textSize="16sp"/>
             </LinearLayout>
-
-            <ImageButton
-                android:id="@+id/btnVolDown"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Sesi kıs"
-                android:padding="15dp"
-                android:src="@drawable/ic_vol_down" />
-
-            <ImageButton
-                android:id="@+id/btnVolUp"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Sesi aç"
-                android:padding="15dp"
-                android:src="@drawable/ic_vol_up" />
-
-            <ImageButton
-                android:id="@+id/btnMute"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Sessiz"
-                android:padding="15dp"
-                android:src="@drawable/ic_mute" />
-
-            <ImageButton
-                android:id="@+id/btnVoice"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Sesli asistan"
-                android:padding="15dp"
-                android:src="@drawable/ic_mic" />
-
-            <ImageButton
-                android:id="@+id/btnSettings"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_round_btn"
-                android:contentDescription="Ayarlar"
-                android:padding="15dp"
-                android:src="@drawable/ic_settings" />
+            <ImageButton android:id="@+id/btnVolDown" android:layout_width="58dp"
+                android:layout_height="58dp" android:layout_marginStart="8dp"
+                android:background="@drawable/bg_round_btn" android:src="@drawable/ic_vol_down"
+                android:padding="17dp" android:contentDescription="Sesi kıs"/>
+            <ImageButton android:id="@+id/btnVolUp" android:layout_width="58dp"
+                android:layout_height="58dp" android:layout_marginStart="6dp"
+                android:background="@drawable/bg_round_btn" android:src="@drawable/ic_vol_up"
+                android:padding="17dp" android:contentDescription="Sesi aç"/>
+            <ImageButton android:id="@+id/btnMute" android:layout_width="58dp"
+                android:layout_height="58dp" android:layout_marginStart="6dp"
+                android:background="@drawable/bg_round_btn" android:src="@drawable/ic_mute"
+                android:padding="17dp" android:contentDescription="Sessiz"/>
+            <ImageButton android:id="@+id/btnVoice" android:layout_width="58dp"
+                android:layout_height="58dp" android:layout_marginStart="6dp"
+                android:background="@drawable/bg_round_btn" android:src="@drawable/ic_mic"
+                android:padding="17dp" android:contentDescription="Sesli asistan"/>
+            <ImageButton android:id="@+id/btnSettings" android:layout_width="58dp"
+                android:layout_height="58dp" android:layout_marginStart="6dp"
+                android:background="@drawable/bg_round_btn" android:src="@drawable/ic_settings"
+                android:padding="17dp" android:contentDescription="Ayarlar"/>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
