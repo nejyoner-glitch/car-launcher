@@ -108,7 +108,9 @@ class MainActivity : Activity() {
     private var maxKmh = 0
     private var driveStartedAt = 0L
     private var drivingSeconds = 0L
-    private var lastConnectionLabel = ""
+    private var lastThemeHour = -1
+    private var cachedWallpaperUri: String? = null
+    private var cachedWallpaper: BitmapDrawable? = null
     private var overLimit = false
     private var tone: ToneGenerator? = null
 
@@ -235,13 +237,18 @@ class MainActivity : Activity() {
     private fun accentColor(): Int = ACCENTS[prefs.getInt("accent", 0).coerceIn(0, ACCENTS.size - 1)]
 
     private fun applyTheme() {
+        lastThemeHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val night = prefs.getBoolean("nightAuto", false) && (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) >= 19 || Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < 7)
         root.setBackgroundColor(if (night) 0xFF05080E.toInt() else BGS[prefs.getInt("bg", 0).coerceIn(0, BGS.size - 1)])
         val wallpaper = prefs.getString("wallpaper", null)
         if (wallpaper != null) try {
-            val input = contentResolver.openInputStream(Uri.parse(wallpaper))
-            val bitmap = input?.use { BitmapFactory.decodeStream(it) }
-            if (bitmap != null) root.background = BitmapDrawable(resources, bitmap)
+            if (cachedWallpaperUri != wallpaper) {
+                val input = contentResolver.openInputStream(Uri.parse(wallpaper))
+                val bitmap = input?.use { BitmapFactory.decodeStream(it) }
+                cachedWallpaper = bitmap?.let { BitmapDrawable(resources, it) }
+                cachedWallpaperUri = wallpaper
+            }
+            cachedWallpaper?.let { root.background = it }
         } catch (_: Exception) { prefs.edit().remove("wallpaper").apply() }
         if (!overLimit) speedText.setTextColor(accentColor())
         progress.progressTintList = ColorStateList.valueOf(accentColor())
@@ -264,7 +271,8 @@ class MainActivity : Activity() {
         override fun run() {
             dateText.text = dateFormat.format(Date())
             refreshMedia()
-            if (prefs.getBoolean("nightAuto", false)) applyTheme()
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            if (prefs.getBoolean("nightAuto", false) && hour != lastThemeHour) applyTheme()
             handler.postDelayed(this, 1000)
         }
     }
@@ -487,7 +495,7 @@ class MainActivity : Activity() {
             20 -> showSoundProfiles()
             21 -> { prefs.edit().putBoolean("nightAuto", !prefs.getBoolean("nightAuto", false)).apply(); applyTheme(); showSettings() }
             22 -> pickWallpaper()
-            23 -> { prefs.edit().remove("wallpaper").apply(); root.background = null; applyTheme(); showSettings() }
+            23 -> { prefs.edit().remove("wallpaper").apply(); cachedWallpaperUri = null; cachedWallpaper = null; root.background = null; applyTheme(); showSettings() }
             24 -> showScreenSaver()
             25 -> showWidgetOptions()
             26 -> AlertDialog.Builder(this).setTitle("Araç verileri").setMessage("T100 Renault RZ CANBUS bilgilerine standart Android API üzerinden doğrudan erişilemiyor. Motor devri, yakıt ve arıza kodları için uyumlu OBD2 adaptörü veya üretici SDK gerekir. GPS hız ve yol verileri kullanılabilir.").setPositiveButton("Tamam", null).show()
