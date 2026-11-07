@@ -13,8 +13,8 @@
 
     <ImageView
         android:id="@+id/icon"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
         android:scaleType="fitCenter" />
 
     <TextView
@@ -26,5 +26,5 @@
         android:gravity="center"
         android:maxLines="1"
         android:textColor="#E6EDF7"
-        android:textSize="16sp" />
+        android:textSize="14sp" />
 </LinearLayout>
