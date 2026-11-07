@@ -147,6 +147,9 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.btnPrev).setOnClickListener { mediaPrev() }
         findViewById<View>(R.id.btnNext).setOnClickListener { mediaNext() }
         btnPlay.setOnClickListener { mediaPlayPause() }
+        findViewById<View>(R.id.quickCarPlay).setOnClickListener { openCarPlay() }
+        findViewById<View>(R.id.quickRadio).setOnClickListener { openRadio() }
+        findViewById<View>(R.id.quickNav).setOnClickListener { openNavigation() }
         findViewById<View>(R.id.btnAllApps).setOnClickListener { showAllApps() }
         findViewById<View>(R.id.btnAllApps).setOnLongClickListener { showQuickActions(); true }
         clock.setOnClickListener { showQuickActions() }
@@ -559,6 +562,14 @@ class MainActivity : Activity() {
         if (saved != null && launchPackage(saved)) return
         showAppDialog("CarPlay uygulamasını seç (Zlink)", queryApps()) { chosen ->
             chosen.pkg?.let { prefs.edit().putString("carplay", it).apply(); launchPackage(it) }
+        }
+    }
+
+    private fun openNavigation() {
+        val saved = prefs.getString("navigation", null)
+        if (saved != null && launchPackage(saved)) return
+        showAppDialog("Navigasyon uygulamasını seç", queryApps()) { chosen ->
+            chosen.pkg?.let { prefs.edit().putString("navigation", it).apply(); launchPackage(it) }
         }
     }
 
