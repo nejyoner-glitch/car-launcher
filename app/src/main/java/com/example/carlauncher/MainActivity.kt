@@ -293,7 +293,7 @@ class MainActivity : Activity() {
         row2.removeAllViews()
         val inflater = LayoutInflater.from(this)
         for (slot in 0 until SLOT_COUNT) {
-            val parent = if (slot < SLOT_COUNT / 2) row1 else row2
+            val parent = row1
             val view = inflater.inflate(R.layout.item_app, parent, false)
             val icon = view.findViewById<ImageView>(R.id.icon)
             val label = view.findViewById<TextView>(R.id.label)
