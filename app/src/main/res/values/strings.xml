@@ -7,6 +7,8 @@
     <string name="add_shortcut">Ekle</string>
     <string name="all_apps">Tüm uygulamalar</string>
     <string name="pick_app">Uygulama seç</string>
-    <string name="remove_shortcut">— Kısayolu kaldır —</string>
+    <string name="remove_shortcut">— Kaldır / yok —</string>
     <string name="gps_waiting">GPS bekleniyor</string>
+    <string name="settings_title">Ayarlar</string>
+    <string name="close">Kapat</string>
 </resources>
