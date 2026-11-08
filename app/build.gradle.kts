@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.carlauncher"
         minSdk = 21
         targetSdk = 33
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 30
+        versionName = "2.1"
     }
 
     buildTypes {
