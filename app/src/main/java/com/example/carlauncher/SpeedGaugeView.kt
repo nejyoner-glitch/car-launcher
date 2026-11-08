@@ -27,6 +27,10 @@ class SpeedGaugeView @JvmOverloads constructor(
     var speedKmh = 0
         set(value) { field = value.coerceAtLeast(0); invalidate() }
 
+    /** GPS hızından türetilen boyuna ivme (m/s²). Artı: hızlanma, eksi: yavaşlama. */
+    var accel = 0f
+        set(value) { field = value.coerceIn(-4f, 4f); invalidate() }
+
     var gaugeColor = Color.rgb(79, 195, 247)
         set(value) { field = value; invalidate() }
 
@@ -35,6 +39,31 @@ class SpeedGaugeView @JvmOverloads constructor(
     private val body = Path()
     private val glass = Path()
     private val oval = RectF()
+
+    // Tesla tarzı ivme çubuğu: sağa dolarsa hızlanma, sola dolarsa yavaşlama.
+    private fun drawAccel(canvas: Canvas, cx: Float, y: Float, r: Float) {
+        val half = r * .55f
+        val hh = 3f * density
+        p.reset()
+        p.isAntiAlias = true
+        p.style = Paint.Style.FILL
+        oval.set(cx - half, y - hh, cx + half, y + hh)
+        p.color = 0x6623496D
+        canvas.drawRoundRect(oval, hh, hh, p)
+        val frac = (Math.abs(accel) / 3f).coerceIn(0f, 1f)
+        if (frac > 0.03f) {
+            if (accel > 0f) {
+                oval.set(cx, y - hh, cx + half * frac, y + hh)
+                p.color = gaugeColor
+            } else {
+                oval.set(cx - half * frac, y - hh, cx, y + hh)
+                p.color = 0xFF66BB6A.toInt()
+            }
+            canvas.drawRoundRect(oval, hh, hh, p)
+        }
+        p.color = Color.WHITE
+        canvas.drawRect(cx - 1f * density, y - hh * 1.5f, cx + 1f * density, y + hh * 1.5f, p)
+    }
 
     /** Hız sayısının dikey merkezi (kadranın içinde, ibre pivotunun biraz üstü). */
     fun numberCenterY(): Float = height * .56f - min(width * .44f, height * .43f) * .34f
@@ -58,6 +87,7 @@ class SpeedGaugeView @JvmOverloads constructor(
         drawGlow(canvas, cx, cy, r)
         drawCar(canvas, cx, cy + r * .50f, r * 1.12f)
         drawDial(canvas, cx, cy, r, outer, w)
+        drawAccel(canvas, cx, cy + r * .30f, r)
     }
 
     // Kadranın arkasında hıza göre parlayan yumuşak halka.

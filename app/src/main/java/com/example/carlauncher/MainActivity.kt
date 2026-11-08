@@ -103,6 +103,22 @@ class MainActivity : Activity() {
     private lateinit var row2: LinearLayout
     private lateinit var dots: TextView
     private var page = 0
+    private lateinit var doorOverlay: View
+    private lateinit var doorView: DoorCarView
+    private lateinit var doorText: TextView
+    private var doorKey = ""
+    private var doorDismissedKey = ""
+    private var accelEma = 0f
+    private val doorReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val i = intent ?: return
+            setDoors(
+                i.getBooleanExtra("fl", false), i.getBooleanExtra("fr", false),
+                i.getBooleanExtra("rl", false), i.getBooleanExtra("rr", false),
+                i.getBooleanExtra("hood", false), i.getBooleanExtra("trunk", false)
+            )
+        }
+    }
 
     private val dateFormat = SimpleDateFormat("EEEE, d MMMM", Locale("tr", "TR"))
 
@@ -145,6 +161,16 @@ class MainActivity : Activity() {
         row1 = findViewById(R.id.row1)
         row2 = findViewById(R.id.row2)
         dots = findViewById(R.id.dots)
+        doorOverlay = findViewById(R.id.doorOverlay)
+        doorView = findViewById(R.id.doorView)
+        doorText = findViewById(R.id.doorText)
+        doorOverlay.setOnClickListener {
+            doorDismissedKey = doorKey
+            doorOverlay.visibility = View.GONE
+        }
+        val doorFilter = android.content.IntentFilter("com.example.carlauncher.DOORS")
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(doorReceiver, doorFilter, Context.RECEIVER_EXPORTED)
+        else registerReceiver(doorReceiver, doorFilter)
 
         val speedBox = findViewById<View>(R.id.speedBox)
         speedGauge.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
@@ -219,6 +245,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try { unregisterReceiver(doorReceiver) } catch (e: Exception) { }
         tone?.release()
         tone = null
     }
@@ -354,6 +381,43 @@ class MainActivity : Activity() {
                 lastMediaRefresh = SystemClock.elapsedRealtime()
             }
             handler.postDelayed(this, 1000)
+        }
+    }
+
+    // ---------------------------------------------------------------- kapı göstergesi
+
+    private fun setDoors(fl: Boolean, fr: Boolean, rl: Boolean, rr: Boolean, hood: Boolean, trunk: Boolean) {
+        val names = ArrayList<String>()
+        if (fl) names.add("Sol ön kapı")
+        if (fr) names.add("Sağ ön kapı")
+        if (rl) names.add("Sol arka kapı")
+        if (rr) names.add("Sağ arka kapı")
+        if (hood) names.add("Kaput")
+        if (trunk) names.add("Bagaj")
+        doorKey = names.joinToString(",")
+        if (names.isEmpty()) {
+            doorDismissedKey = ""
+            doorOverlay.visibility = View.GONE
+            return
+        }
+        doorView.setState(fl, fr, rl, rr, hood, trunk)
+        doorText.text = names.joinToString("\n") + "\naçık"
+        if (doorKey != doorDismissedKey) doorOverlay.visibility = View.VISIBLE
+    }
+
+    private fun runDoorDemo() {
+        val steps = listOf(
+            booleanArrayOf(true, false, false, false, false, false),
+            booleanArrayOf(true, true, false, false, false, false),
+            booleanArrayOf(false, false, true, true, false, false),
+            booleanArrayOf(false, false, false, false, false, true),
+            booleanArrayOf(false, false, false, false, true, false),
+            booleanArrayOf(true, true, true, true, true, true),
+            booleanArrayOf(false, false, false, false, false, false)
+        )
+        doorDismissedKey = ""
+        steps.forEachIndexed { i, s ->
+            handler.postDelayed({ setDoors(s[0], s[1], s[2], s[3], s[4], s[5]) }, i * 1600L)
         }
     }
 
@@ -509,7 +573,8 @@ class MainActivity : Activity() {
             "Sistem ayarları",
             "Güncellemeleri kontrol et",
             "İndirilen güncellemeyi yükle",
-            "CarPlay otomatik açılış: " + (if (prefs.getBoolean("carplayAuto", true)) "Açık" else "Kapalı")
+            "CarPlay otomatik açılış: " + (if (prefs.getBoolean("carplayAuto", true)) "Açık" else "Kapalı"),
+            "Kapı göstergesi testi"
         )
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle(R.string.settings_title)
@@ -574,6 +639,7 @@ class MainActivity : Activity() {
             13 -> openSettingsScreen(Settings.ACTION_SETTINGS)
             14 -> launcherUpdater.check(true)
             15 -> launcherUpdater.retryInstall()
+            17 -> runDoorDemo()
             16 -> {
                 prefs.edit().putBoolean("carplayAuto", !prefs.getBoolean("carplayAuto", true)).apply()
                 showSettings()
@@ -719,6 +785,14 @@ class MainActivity : Activity() {
 
             val prev = lastLoc
             if (prev != null && kmh >= 3) tripKm += prev.distanceTo(location) / 1000f
+            if (prev != null && location.hasSpeed() && prev.hasSpeed()) {
+                val dt = (location.time - prev.time) / 1000f
+                if (dt in 0.2f..3f) {
+                    val a = (location.speed - prev.speed) / dt
+                    accelEma = accelEma * 0.6f + a * 0.4f
+                    speedGauge.accel = if (kmh < 2 && Math.abs(accelEma) < 0.3f) 0f else accelEma
+                }
+            }
             lastLoc = location
 
             if (kmh >= 5 && location.hasBearing()) {
