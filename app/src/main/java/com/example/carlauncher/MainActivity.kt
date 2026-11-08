@@ -140,6 +140,7 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.btnNext).setOnClickListener { mediaNext() }
         btnPlay.setOnClickListener { mediaPlayPause() }
         findViewById<View>(R.id.btnAllApps).setOnClickListener { showAllApps() }
+        findViewById<View>(R.id.btnCarPlay).setOnClickListener { openPhoneProjection() }
         findViewById<View>(R.id.btnVolDown).setOnClickListener { changeVolume(AudioManager.ADJUST_LOWER) }
         findViewById<View>(R.id.btnVolUp).setOnClickListener { changeVolume(AudioManager.ADJUST_RAISE) }
         findViewById<View>(R.id.btnMute).setOnClickListener {
@@ -300,6 +301,22 @@ class MainActivity : Activity() {
             if (chosen.pkg == null) prefs.edit().remove("slot$slot").apply()
             else prefs.edit().putString("slot$slot", chosen.pkg).apply()
             buildShortcuts()
+        }
+    }
+
+    private fun openPhoneProjection() {
+        val preferred = prefs.getString("carplay_package", null)
+            ?: prefs.getString("autostart", null)
+        val candidates = listOfNotNull(preferred) + listOf(
+            "com.zjinnova.zlink", "com.zjinnova.zlink5", "com.zjinnova.zlink6",
+            "com.carlinkit.autokit"
+        )
+        if (candidates.distinct().any { launchPackage(it) }) return
+        showAppDialog("Android Auto / CarPlay uygulamasını seç", queryApps()) { selected ->
+            selected.pkg?.let {
+                prefs.edit().putString("carplay_package", it).apply()
+                launchPackage(it)
+            }
         }
     }
 
