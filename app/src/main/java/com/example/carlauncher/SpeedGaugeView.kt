@@ -213,15 +213,6 @@ class SpeedGaugeView @JvmOverloads constructor(
             p.strokeWidth = (if (major) 2.6f else 1.25f) * density
             canvas.drawLine(x1, y1, x2, y2, p)
 
-            if (major) {
-                val (tx, ty) = point(cx, cy, r - 34f * density, degree)
-                p.style = Paint.Style.FILL
-                p.color = Color.WHITE
-                p.textAlign = Paint.Align.CENTER
-                p.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                p.textSize = min(16f * density, w / 28f)
-                canvas.drawText((i * 5).toString(), tx, ty - (p.ascent() + p.descent()) / 2f, p)
-            }
         }
 
         // İbre yalnızca GPS hızıyla hareket eder.
