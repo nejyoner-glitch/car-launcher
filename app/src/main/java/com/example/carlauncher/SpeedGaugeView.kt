@@ -1,13 +1,15 @@
 package com.example.carlauncher
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.View
 import kotlin.math.cos
@@ -15,22 +17,27 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * GPS-driven, analogue-style speed dial. The Clio IV photo is decoration only:
- * speed, needle and warning tint are fed by the existing GPS listener.
- * No fake transmission/vehicle sensor information is shown.
+ * GPS ile çalışan analog hız kadranı. Altındaki araç siluetini kod ile çiziyoruz
+ * (fotoğraf yok): yay, ibre ve vurgu rengi hıza göre canlı değişir.
  */
 class SpeedGaugeView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs) {
+
     var speedKmh = 0
         set(value) { field = value.coerceAtLeast(0); invalidate() }
 
     var gaugeColor = Color.rgb(79, 195, 247)
         set(value) { field = value; invalidate() }
 
-    private val p = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-    private val car by lazy { BitmapFactory.decodeResource(resources, R.drawable.clio_speed) }
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val density = resources.displayMetrics.density
+    private val body = Path()
+    private val glass = Path()
+    private val oval = RectF()
+
+    /** Hız sayısının dikey merkezi (kadranın içinde, ibre pivotunun biraz üstü). */
+    fun numberCenterY(): Float = height * .56f - min(width * .44f, height * .43f) * .34f
 
     private fun point(x: Float, y: Float, radius: Float, degrees: Float): Pair<Float, Float> {
         val a = Math.toRadians(degrees.toDouble())
@@ -44,29 +51,117 @@ class SpeedGaugeView @JvmOverloads constructor(
         if (w <= 0f || h <= 0f) return
 
         val cx = w * .5f
-        val cy = h * .665f
-        val r = min(w * .455f, h * .48f)
+        val cy = h * .56f
+        val r = min(w * .44f, h * .43f)
         val outer = RectF(cx - r, cy - r, cx + r, cy + r)
-        val carBitmap = car
 
-        // The car stays behind the scale and real-time numbers, slightly darkened
-        // so white text always stays legible on the dashboard.
-        if (carBitmap != null) {
-            val dest = RectF(w * .115f, h * .455f, w * .885f, h * .825f)
-            p.reset()
-            p.isAntiAlias = true
-            p.isFilterBitmap = true
-            p.alpha = 174
-            canvas.drawBitmap(carBitmap, null, dest, p)
-            p.alpha = 255
-            p.shader = LinearGradient(0f, h * .58f, 0f, h * .88f,
-                intArrayOf(0x00091A34, 0x24091A34, 0xEE091A34.toInt()),
-                null, Shader.TileMode.CLAMP)
-            canvas.drawRect(0f, h * .58f, w, h * .91f, p)
-            p.shader = null
+        drawGlow(canvas, cx, cy, r)
+        drawCar(canvas, cx, cy + r * .50f, r * 1.12f)
+        drawDial(canvas, cx, cy, r, outer, w)
+    }
+
+    // Kadranın arkasında hıza göre parlayan yumuşak halka.
+    private fun drawGlow(canvas: Canvas, cx: Float, cy: Float, r: Float) {
+        val strength = (speedKmh.coerceIn(0, 220) / 220f * 70f + 22f).toInt()
+        p.reset()
+        p.isAntiAlias = true
+        p.shader = RadialGradient(
+            cx, cy, r * 1.15f,
+            intArrayOf(
+                Color.argb(strength, Color.red(gaugeColor), Color.green(gaugeColor), Color.blue(gaugeColor)),
+                Color.argb(0, Color.red(gaugeColor), Color.green(gaugeColor), Color.blue(gaugeColor))
+            ),
+            floatArrayOf(.55f, 1f), Shader.TileMode.CLAMP
+        )
+        canvas.drawCircle(cx, cy, r * 1.15f, p)
+        p.shader = null
+    }
+
+    // Yandan görünüm hatchback silueti. Orijinal çizimdir, belirli bir marka değildir.
+    private fun drawCar(canvas: Canvas, cx: Float, top: Float, carW: Float) {
+        val left = cx - carW / 2f
+        val carH = carW * .4f
+        fun fx(x: Float) = left + x * carW
+        fun fy(y: Float) = top + carH - y * carW
+
+        // zemin gölgesi
+        p.reset()
+        p.isAntiAlias = true
+        p.color = Color.argb(110, 0, 0, 0)
+        oval.set(fx(.0f), fy(.025f), fx(1f), fy(-.02f))
+        canvas.drawOval(oval, p)
+
+        body.reset()
+        body.moveTo(fx(.03f), fy(.07f))
+        body.lineTo(fx(.02f), fy(.19f))
+        body.quadTo(fx(.03f), fy(.24f), fx(.09f), fy(.255f))
+        body.lineTo(fx(.19f), fy(.36f))
+        body.quadTo(fx(.21f), fy(.385f), fx(.27f), fy(.385f))
+        body.lineTo(fx(.55f), fy(.385f))
+        body.quadTo(fx(.62f), fy(.38f), fx(.68f), fy(.30f))
+        body.lineTo(fx(.77f), fy(.235f))
+        body.lineTo(fx(.93f), fy(.205f))
+        body.quadTo(fx(.985f), fy(.19f), fx(.985f), fy(.13f))
+        body.lineTo(fx(.975f), fy(.07f))
+        body.close()
+
+        p.style = Paint.Style.FILL
+        p.shader = LinearGradient(
+            0f, fy(.39f), 0f, fy(.05f),
+            intArrayOf(0xFF3A5C80.toInt(), 0xFF16304D.toInt()), null, Shader.TileMode.CLAMP
+        )
+        canvas.drawPath(body, p)
+        p.shader = null
+
+        // camlar
+        glass.reset()
+        glass.moveTo(fx(.20f), fy(.265f))
+        glass.lineTo(fx(.285f), fy(.355f))
+        glass.lineTo(fx(.54f), fy(.355f))
+        glass.lineTo(fx(.625f), fy(.272f))
+        glass.close()
+        p.color = Color.argb(185, 8, 20, 36)
+        canvas.drawPath(glass, p)
+        p.color = Color.argb(150, 58, 92, 128)
+        p.strokeWidth = carW * .012f
+        p.style = Paint.Style.STROKE
+        canvas.drawLine(fx(.41f), fy(.355f), fx(.41f), fy(.268f), p)
+
+        // gövde çizgisi
+        p.color = Color.argb(200, Color.red(gaugeColor), Color.green(gaugeColor), Color.blue(gaugeColor))
+        p.strokeWidth = carW * .014f
+        p.strokeJoin = Paint.Join.ROUND
+        canvas.drawPath(body, p)
+
+        // yan çizgi (kapı hattı)
+        p.color = Color.argb(90, 255, 255, 255)
+        p.strokeWidth = carW * .008f
+        canvas.drawLine(fx(.12f), fy(.18f), fx(.90f), fy(.17f), p)
+
+        // farlar
+        p.style = Paint.Style.FILL
+        p.color = 0xFFFFF3C4.toInt()
+        canvas.drawRoundRect(fx(.945f), fy(.19f), fx(.985f), fy(.15f), carW * .01f, carW * .01f, p)
+        p.color = 0xFFEF5350.toInt()
+        canvas.drawRoundRect(fx(.02f), fy(.2f), fx(.045f), fy(.15f), carW * .01f, carW * .01f, p)
+
+        // tekerlekler
+        for (wx in floatArrayOf(.22f, .78f)) {
+            val wr = carW * .078f
+            p.style = Paint.Style.FILL
+            p.color = 0xFF070F1A.toInt()
+            canvas.drawCircle(fx(wx), fy(.065f), wr * 1.12f, p)
+            p.color = 0xFF1E2F44.toInt()
+            canvas.drawCircle(fx(wx), fy(.065f), wr, p)
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = carW * .01f
+            p.color = Color.argb(220, Color.red(gaugeColor), Color.green(gaugeColor), Color.blue(gaugeColor))
+            canvas.drawCircle(fx(wx), fy(.065f), wr * .55f, p)
         }
+    }
 
-        // 0–220 km/h scale, with a dark track and live illuminated arc.
+    private fun drawDial(canvas: Canvas, cx: Float, cy: Float, r: Float, outer: RectF, w: Float) {
+        // 0-220 km/h iz ve canlı yay
         p.reset()
         p.isAntiAlias = true
         p.style = Paint.Style.STROKE
@@ -83,6 +178,7 @@ class SpeedGaugeView @JvmOverloads constructor(
             val degree = 150f + i / 44f * 240f
             val (x1, y1) = point(cx, cy, r - (3f * density), degree)
             val (x2, y2) = point(cx, cy, r - (if (major) 17f else 10f) * density, degree)
+            p.style = Paint.Style.STROKE
             p.color = if (i * 5 <= speedKmh) gaugeColor else 0xFFB5CEE8.toInt()
             p.strokeWidth = (if (major) 2.6f else 1.25f) * density
             canvas.drawLine(x1, y1, x2, y2, p)
@@ -92,17 +188,17 @@ class SpeedGaugeView @JvmOverloads constructor(
                 p.style = Paint.Style.FILL
                 p.color = Color.WHITE
                 p.textAlign = Paint.Align.CENTER
-                p.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                p.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 p.textSize = min(16f * density, w / 28f)
                 canvas.drawText((i * 5).toString(), tx, ty - (p.ascent() + p.descent()) / 2f, p)
-                p.style = Paint.Style.STROKE
             }
         }
 
-        // The needle moves with GPS speed, never with a simulated value.
+        // İbre yalnızca GPS hızıyla hareket eder.
         val needle = 150f + speedKmh.coerceIn(0, 220) / 220f * 240f
         val (nx, ny) = point(cx, cy, r - 17f * density, needle)
         p.style = Paint.Style.STROKE
+        p.strokeCap = Paint.Cap.ROUND
         p.strokeWidth = 3.5f * density
         p.color = gaugeColor
         canvas.drawLine(cx, cy, nx, ny, p)

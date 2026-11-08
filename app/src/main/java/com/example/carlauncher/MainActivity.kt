@@ -62,7 +62,8 @@ class MainActivity : Activity() {
     private data class AppItem(val label: String, val pkg: String?, val icon: Drawable?)
 
     private companion object {
-        const val SLOT_COUNT = 6
+        const val PER_PAGE = 6
+        const val PAGES = 2
         const val REQ_LOCATION = 100
         var autoStarted = false
 
@@ -100,6 +101,8 @@ class MainActivity : Activity() {
     private lateinit var progress: ProgressBar
     private lateinit var row1: LinearLayout
     private lateinit var row2: LinearLayout
+    private lateinit var dots: TextView
+    private var page = 0
 
     private val dateFormat = SimpleDateFormat("EEEE, d MMMM", Locale("tr", "TR"))
 
@@ -141,6 +144,12 @@ class MainActivity : Activity() {
         progress = findViewById(R.id.progress)
         row1 = findViewById(R.id.row1)
         row2 = findViewById(R.id.row2)
+        dots = findViewById(R.id.dots)
+
+        val speedBox = findViewById<View>(R.id.speedBox)
+        speedGauge.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            speedGauge.post { speedBox.translationY = speedGauge.numberCenterY() - speedBox.height / 2f }
+        }
 
         tripKm = prefs.getFloat("trip", 0f)
         maxKmh = prefs.getInt("max", 0)
@@ -163,6 +172,16 @@ class MainActivity : Activity() {
                 launchPackage(c.packageName)
             } else if (!hasNotificationAccess()) {
                 openSettingsScreen(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            }
+        }
+        findViewById<SwipeLayout>(R.id.mediaCard).onSwipe = { dir ->
+            if (dir > 0) mediaNext() else mediaPrev()
+        }
+        findViewById<SwipeLayout>(R.id.shortcutArea).onSwipe = { dir ->
+            val np = (page + dir).coerceIn(0, PAGES - 1)
+            if (np != page) {
+                page = np
+                buildShortcuts()
             }
         }
         findViewById<View>(R.id.speedCard).setOnLongClickListener {
@@ -344,8 +363,9 @@ class MainActivity : Activity() {
         row1.removeAllViews()
         row2.removeAllViews()
         val inflater = LayoutInflater.from(this)
-        for (slot in 0 until SLOT_COUNT) {
-            val parent = if (slot < SLOT_COUNT / 2) row1 else row2
+        for (i in 0 until PER_PAGE) {
+            val slot = page * PER_PAGE + i
+            val parent = if (i < PER_PAGE / 2) row1 else row2
             val view = inflater.inflate(R.layout.item_app, parent, false)
             val icon = view.findViewById<ImageView>(R.id.icon)
             val label = view.findViewById<TextView>(R.id.label)
@@ -371,6 +391,7 @@ class MainActivity : Activity() {
             }
             parent.addView(view)
         }
+        dots.text = (0 until PAGES).joinToString("   ") { if (it == page) "●" else "○" }
     }
 
     private fun pickForSlot(slot: Int) {

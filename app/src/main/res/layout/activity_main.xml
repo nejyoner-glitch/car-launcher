@@ -47,10 +47,10 @@
                 android:layout_height="match_parent" />
 
             <LinearLayout
+                android:id="@+id/speedBox"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center_horizontal"
-                android:layout_marginTop="105dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
@@ -132,7 +132,7 @@
         android:layout_weight="1.5"
         android:orientation="vertical">
 
-        <LinearLayout
+        <com.example.carlauncher.SwipeLayout
             android:id="@+id/mediaCard"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -216,22 +216,38 @@
                 android:contentDescription="Sonraki"
                 android:padding="18dp"
                 android:src="@drawable/ic_next" />
-        </LinearLayout>
+        </com.example.carlauncher.SwipeLayout>
 
-        <LinearLayout
-            android:id="@+id/row1"
+        <com.example.carlauncher.SwipeLayout
+            android:id="@+id/shortcutArea"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="14dp"
-            android:layout_weight="1"
-            android:orientation="horizontal" />
+            android:layout_weight="2"
+            android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/row2"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal" />
+            <LinearLayout
+                android:id="@+id/row1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:id="@+id/row2"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal" />
+
+            <TextView
+                android:id="@+id/dots"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="#8FA3BF"
+                android:textSize="13sp" />
+        </com.example.carlauncher.SwipeLayout>
 
         <!-- Alt çubuk -->
         <LinearLayout
