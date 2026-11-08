@@ -124,6 +124,7 @@ class MainActivity : Activity() {
         tripText = findViewById(R.id.trip)
         gpsStatus = findViewById(R.id.gpsStatus)
         weatherText = findViewById(R.id.weather)
+        weatherText.text = prefs.getString("weather_cached", "Hava durumu bekleniyor")
         title = findViewById(R.id.title)
         artist = findViewById(R.id.artist)
         art = findViewById(R.id.art)
@@ -242,7 +243,7 @@ class MainActivity : Activity() {
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        if (!prefs.getBoolean("weather", true)) weatherText.text = ""
+        weatherText.text = if (prefs.getBoolean("weather", true)) prefs.getString("weather_cached", "Hava durumu bekleniyor") else ""
     }
 
     // Saniyede bir: tarih (Türkçe) ve medya bilgisi.
@@ -718,7 +719,10 @@ class MainActivity : Activity() {
             val finalResult = result
             runOnUiThread {
                 weatherFetching = false
-                if (finalResult != null) weatherText.text = finalResult
+                if (finalResult != null) {
+                    prefs.edit().putString("weather_cached", finalResult).apply()
+                    if (prefs.getBoolean("weather", true)) weatherText.text = finalResult
+                }
             }
         }.start()
     }
