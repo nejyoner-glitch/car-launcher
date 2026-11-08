@@ -31,71 +31,89 @@
             android:textColor="#9FB3CE"
             android:textSize="22sp" />
 
-        <LinearLayout
+        <FrameLayout
             android:id="@+id/speedCard"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
             android:background="@drawable/bg_card"
             android:clickable="true"
-            android:focusable="true"
-            android:orientation="vertical"
-            android:padding="18dp">
+            android:focusable="true">
+
+            <com.example.carlauncher.SpeedGaugeView
+                android:id="@+id/speedGauge"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="105dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/speed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
-                    android:textColor="#4FC3F7"
-                    android:textSize="64sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/kmh"
-                    android:textColor="#9FB3CE"
-                    android:textSize="20sp" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/heading"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="—"
                     android:textColor="#FFFFFF"
-                    android:textSize="30sp"
-                    android:textStyle="bold" />
+                    android:textSize="64sp"
+                    android:textStyle="bold"
+                    android:shadowColor="#B000A6FF"
+                    android:shadowRadius="8"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="@string/kmh"
+                    android:textColor="#E6EDF7"
+                    android:textSize="17sp" />
             </LinearLayout>
 
             <TextView
-                android:id="@+id/trip"
+                android:id="@+id/heading"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="#B8C7DC"
-                android:textSize="15sp" />
+                android:layout_gravity="top|end"
+                android:layout_marginTop="18dp"
+                android:layout_marginEnd="18dp"
+                android:text="—"
+                android:textColor="#9FB3CE"
+                android:textSize="17sp"
+                android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/gpsStatus"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/gps_waiting"
-                android:textColor="#6E83A0"
-                android:textSize="13sp" />
-        </LinearLayout>
+                android:layout_gravity="bottom"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingBottom="11dp">
+
+                <TextView
+                    android:id="@+id/trip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/gpsStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/gps_waiting"
+                    android:textColor="#9FB3CE"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </FrameLayout>
 
         <TextView
             android:id="@+id/weather"
