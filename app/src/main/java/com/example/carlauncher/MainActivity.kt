@@ -87,6 +87,7 @@ class MainActivity : Activity() {
     private lateinit var root: View
     private lateinit var clock: TextClock
     private lateinit var dateText: TextView
+    private lateinit var speedGauge: SpeedGaugeView
     private lateinit var speedText: TextView
     private lateinit var headingText: TextView
     private lateinit var tripText: TextView
@@ -126,6 +127,7 @@ class MainActivity : Activity() {
         root = findViewById(R.id.root)
         clock = findViewById(R.id.clock)
         dateText = findViewById(R.id.date)
+        speedGauge = findViewById(R.id.speedGauge)
         speedText = findViewById(R.id.speed)
         headingText = findViewById(R.id.heading)
         tripText = findViewById(R.id.trip)
@@ -307,7 +309,8 @@ class MainActivity : Activity() {
 
     private fun applyTheme() {
         root.setBackgroundColor(BGS[prefs.getInt("bg", 0).coerceIn(0, BGS.size - 1)])
-        if (!overLimit) speedText.setTextColor(accentColor())
+        speedText.setTextColor(if (overLimit) RED else Color.WHITE)
+        speedGauge.gaugeColor = if (overLimit) RED else accentColor()
         progress.progressTintList = ColorStateList.valueOf(accentColor())
         progress.progressBackgroundTintList = ColorStateList.valueOf(0xFF2A3A52.toInt())
 
@@ -690,6 +693,7 @@ class MainActivity : Activity() {
             val kmhF = if (location.hasSpeed()) location.speed * 3.6f else 0f
             val kmh = if (kmhF < 2f) 0 else kmhF.roundToInt()
             speedText.text = kmh.toString()
+            speedGauge.speedKmh = kmh
             if (kmh > maxKmh) maxKmh = kmh
 
             val prev = lastLoc
@@ -705,7 +709,8 @@ class MainActivity : Activity() {
             val over = limit > 0 && kmh > limit
             if (over && !overLimit) beep()
             overLimit = over
-            speedText.setTextColor(if (over) RED else accentColor())
+            speedText.setTextColor(if (over) RED else Color.WHITE)
+            speedGauge.gaugeColor = if (over) RED else accentColor()
 
             updateTripText()
             maybeFetchWeather(location)
