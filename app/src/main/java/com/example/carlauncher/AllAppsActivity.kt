@@ -80,7 +80,7 @@ class AllAppsActivity : Activity() {
         grid.removeAllViews()
         val matches = apps.filter { it.name.contains(filter.trim(), ignoreCase = true) }
         count.text = "${matches.size} uygulama"
-        val width = (resources.displayMetrics.widthPixels - dp(52 + 20)) / 6
+        val tileWidth = (resources.displayMetrics.widthPixels - dp(52 + 20)) / 6
         for (app in matches) {
             val tile = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -101,7 +101,7 @@ class AllAppsActivity : Activity() {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }, LinearLayout.LayoutParams(-1, dp(25)))
             grid.addView(tile, GridLayout.LayoutParams().apply {
-                width = width; height = dp(105)
+                width = tileWidth; height = dp(105)
                 setMargins(dp(5), dp(5), dp(5), dp(5))
             })
         }
