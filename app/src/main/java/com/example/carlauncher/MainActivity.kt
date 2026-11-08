@@ -49,6 +49,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 class MainActivity : Activity() {
+    private val launcherUpdater by lazy { LauncherUpdater(this) }
+
 
     private data class AppItem(val label: String, val pkg: String?, val icon: Drawable?)
 
@@ -173,11 +175,13 @@ class MainActivity : Activity() {
         applyTheme()
         startLocation()
         handler.post(tick)
+        launcherUpdater.onResume()
     }
 
     override fun onPause() {
         super.onPause()
         stopLocation()
+        launcherUpdater.onPause()
         handler.removeCallbacks(tick)
         prefs.edit().putFloat("trip", tripKm).putInt("max", maxKmh).apply()
     }
@@ -369,7 +373,9 @@ class MainActivity : Activity() {
             "Bluetooth ayarları",
             "Ekran ve parlaklık ayarları",
             "Varsayılan ana ekran uygulaması",
-            "Sistem ayarları"
+            "Sistem ayarları",
+            "Güncellemeleri kontrol et",
+            "İndirilen güncellemeyi yükle"
         )
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle(R.string.settings_title)
@@ -432,6 +438,8 @@ class MainActivity : Activity() {
             11 -> openSettingsScreen(Settings.ACTION_DISPLAY_SETTINGS)
             12 -> openSettingsScreen(Settings.ACTION_HOME_SETTINGS)
             13 -> openSettingsScreen(Settings.ACTION_SETTINGS)
+            14 -> launcherUpdater.check(true)
+            15 -> launcherUpdater.retryInstall()
         }
     }
 
