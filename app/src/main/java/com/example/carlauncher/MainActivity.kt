@@ -304,9 +304,7 @@ class MainActivity : Activity() {
     }
 
     private fun showAllApps() {
-        showAppDialog(getString(R.string.all_apps), queryApps()) { chosen ->
-            chosen.pkg?.let { launchPackage(it) }
-        }
+        startActivity(Intent(this, AllAppsActivity::class.java))
     }
 
     private fun showAppDialog(titleText: String, items: List<AppItem>, onPick: (AppItem) -> Unit) {
