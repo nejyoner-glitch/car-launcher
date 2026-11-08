@@ -10,6 +10,13 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Color
+import android.graphics.Typeface
+import android.view.Gravity
+import android.widget.FrameLayout
 import android.graphics.drawable.Drawable
 import android.location.Location
 import android.location.LocationListener
@@ -166,6 +173,7 @@ class MainActivity : Activity() {
         applyTheme()
         updateTripText()
         requestLocationIfNeeded()
+        if (savedInstanceState == null) showRenaultSplash()
 
         // CarPlay launch is scheduled from onResume after preferences and UI are ready.
     }
@@ -211,6 +219,74 @@ class MainActivity : Activity() {
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+    }
+
+    private fun showRenaultSplash() {
+        // Only on a fresh Activity launch, not on resume from CarPlay or other apps.
+        val overlay = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(7, 11, 20))
+            isClickable = true
+            isFocusable = true
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        val density = resources.displayMetrics.density
+        val emblem = object : View(this) {
+            private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(220, 228, 238)
+                style = Paint.Style.STROKE
+                strokeWidth = 9f
+                strokeJoin = Paint.Join.ROUND
+            }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val sx = width / 200f
+                val sy = height / 220f
+                canvas.save()
+                canvas.scale(sx, sy)
+                val diamond = Path().apply {
+                    moveTo(100f, 9f)
+                    lineTo(176f, 108f)
+                    lineTo(100f, 211f)
+                    lineTo(24f, 108f)
+                    close()
+                }
+                canvas.drawPath(diamond, paint)
+                val inner = Path().apply {
+                    moveTo(100f, 46f)
+                    lineTo(145f, 108f)
+                    lineTo(100f, 173f)
+                    lineTo(55f, 108f)
+                    close()
+                }
+                paint.strokeWidth = 7f
+                canvas.drawPath(inner, paint)
+                canvas.restore()
+            }
+        }
+        content.addView(emblem, LinearLayout.LayoutParams((130 * density).toInt(), (142 * density).toInt()))
+        content.addView(TextView(this).apply {
+            text = "RENAULT"
+            textSize = 27f
+            letterSpacing = 0.2f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = (12 * density).toInt() })
+        overlay.addView(content, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+        val decor = window.decorView as ViewGroup
+        decor.addView(overlay, ViewGroup.LayoutParams(-1, -1))
+        overlay.alpha = 0f
+        overlay.animate().alpha(1f).setDuration(220).start()
+        handler.postDelayed({
+            if (!isFinishing && overlay.parent != null) {
+                overlay.animate().alpha(0f).setDuration(350).withEndAction {
+                    (overlay.parent as? ViewGroup)?.removeView(overlay)
+                }.start()
+            }
+        }, 1650)
     }
 
     private fun scheduleCarPlayStart() {
