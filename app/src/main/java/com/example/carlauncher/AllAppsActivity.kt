@@ -48,6 +48,16 @@ class AllAppsActivity : Activity() {
         count = TextView(this).apply { textSize = 14f; setTextColor(muted) }
         top.addView(count)
         root.addView(top)
+        val carplay = TextView(this).apply {
+            text = "▣  Android Auto / CarPlay"
+            textSize = 19f
+            gravity = Gravity.CENTER
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(white)
+            background = panel()
+            setOnClickListener { openPhoneProjection() }
+        }
+        root.addView(carplay, LinearLayout.LayoutParams(-1, dp(53)).apply { topMargin = dp(9) })
         val search = EditText(this).apply {
             hint = "Uygulama ara…"
             setSingleLine(true)
@@ -74,6 +84,33 @@ class AllAppsActivity : Activity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { render(s?.toString().orEmpty()) }
             override fun afterTextChanged(s: Editable?) {}
         })
+    }
+
+    private fun openPhoneProjection() {
+        val pm = packageManager
+        val preferred = getSharedPreferences("launcher_prefs", MODE_PRIVATE).getString("autostart", null)
+        val candidates = listOfNotNull(preferred) + listOf(
+            "com.zjinnova.zlink", "com.zjinnova.zlink5", "com.zjinnova.zlink6",
+            "com.syu.ms", "com.carlinkit.autokit", "com.txznet.txz"
+        )
+        for (pkg in candidates.distinct()) {
+            val launch = pm.getLaunchIntentForPackage(pkg)
+            if (launch != null) {
+                startActivity(launch)
+                return
+            }
+        }
+        val choices = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            .filter { it.activityInfo.packageName != packageName }
+            .sortedBy { it.loadLabel(pm).toString().lowercase(Locale.ROOT) }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Android Auto / CarPlay uygulamasını seç")
+            .setItems(choices.map { it.loadLabel(pm).toString() }.toTypedArray()) { _, index ->
+                val pkg = choices[index].activityInfo.packageName
+                getSharedPreferences("launcher_prefs", MODE_PRIVATE).edit().putString("autostart", pkg).apply()
+                pm.getLaunchIntentForPackage(pkg)?.let { startActivity(it) }
+            }
+            .setNegativeButton("İptal", null).show()
     }
 
     private fun render(filter: String) {
