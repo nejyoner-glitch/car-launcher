@@ -104,6 +104,10 @@ class MainActivity : Activity() {
 
     private var weatherFetching = false
     private var lastWeatherFetch = 0L
+    private var lastMediaRefresh = 0L
+    private var lastMediaKey = ""
+    private var lastMediaArt: Bitmap? = null
+    private var lastAutoCarplayAttempt = 0L
 
     // ---------------------------------------------------------------- yaşam döngüsü
 
@@ -161,12 +165,7 @@ class MainActivity : Activity() {
         updateTripText()
         requestLocationIfNeeded()
 
-        // Açılışta seçili uygulamayı (ör. Zlink) bir kez otomatik başlat.
-        if (savedInstanceState == null && !autoStarted && SystemClock.elapsedRealtime() < 3 * 60 * 1000) {
-            autoStarted = true
-            val pkg = prefs.getString("autostart", null)
-            if (pkg != null) handler.postDelayed({ launchPackage(pkg) }, 3000)
-        }
+        // CarPlay launch is scheduled from onResume after preferences and UI are ready.
     }
 
     override fun onResume() {
@@ -176,6 +175,7 @@ class MainActivity : Activity() {
         startLocation()
         handler.post(tick)
         launcherUpdater.onResume()
+        scheduleCarPlayStart()
     }
 
     override fun onPause() {
@@ -211,6 +211,20 @@ class MainActivity : Activity() {
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
     }
 
+    private fun scheduleCarPlayStart() {
+        if (!prefs.getBoolean("carplayAuto", true)) return
+        val pkg = prefs.getString("autostart", null) ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (autoStarted || now - lastAutoCarplayAttempt < 20_000L) return
+        autoStarted = true
+        lastAutoCarplayAttempt = now
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed && hasWindowFocus() && !launchPackage(pkg)) {
+                Toast.makeText(this, "CarPlay uygulaması açılamadı. Ayarlar'dan tekrar seç.", Toast.LENGTH_LONG).show()
+            }
+        }, 2200)
+    }
+
     private fun accentColor(): Int = ACCENTS[prefs.getInt("accent", 0).coerceIn(0, ACCENTS.size - 1)]
 
     private fun applyTheme() {
@@ -235,7 +249,10 @@ class MainActivity : Activity() {
     private val tick = object : Runnable {
         override fun run() {
             dateText.text = dateFormat.format(Date())
-            refreshMedia()
+            if (SystemClock.elapsedRealtime() - lastMediaRefresh >= 1500L) {
+                refreshMedia()
+                lastMediaRefresh = SystemClock.elapsedRealtime()
+            }
             handler.postDelayed(this, 1000)
         }
     }
@@ -375,7 +392,8 @@ class MainActivity : Activity() {
             "Varsayılan ana ekran uygulaması",
             "Sistem ayarları",
             "Güncellemeleri kontrol et",
-            "İndirilen güncellemeyi yükle"
+            "İndirilen güncellemeyi yükle",
+            "CarPlay otomatik açılış: " + (if (prefs.getBoolean("carplayAuto", true)) "Açık" else "Kapalı")
         )
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle(R.string.settings_title)
@@ -440,6 +458,10 @@ class MainActivity : Activity() {
             13 -> openSettingsScreen(Settings.ACTION_SETTINGS)
             14 -> launcherUpdater.check(true)
             15 -> launcherUpdater.retryInstall()
+            16 -> {
+                prefs.edit().putBoolean("carplayAuto", !prefs.getBoolean("carplayAuto", true)).apply()
+                showSettings()
+            }
         }
     }
 
@@ -499,19 +521,28 @@ class MainActivity : Activity() {
             art.setImageResource(R.drawable.ic_music)
             btnPlay.setImageResource(R.drawable.ic_play)
             progress.visibility = View.INVISIBLE
+            lastMediaKey = ""
+            lastMediaArt = null
             return
         }
         val meta = controller.metadata
-        title.text = meta?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: getString(R.string.no_media)
-        artist.text = meta?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        val songTitle = meta?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: getString(R.string.no_media)
+        val songArtist = meta?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        if (title.text.toString() != songTitle) title.text = songTitle
+        if (artist.text.toString() != songArtist) artist.text = songArtist
         val bmp: Bitmap? = meta?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: meta?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        if (bmp != null) {
-            art.setPadding(0, 0, 0, 0)
-            art.setImageBitmap(bmp)
-        } else {
-            art.setPadding(24, 24, 24, 24)
-            art.setImageResource(R.drawable.ic_music)
+        val mediaKey = controller.packageName + "|" + songTitle + "|" + songArtist
+        if (mediaKey != lastMediaKey || bmp !== lastMediaArt) {
+            if (bmp != null) {
+                art.setPadding(0, 0, 0, 0)
+                art.setImageBitmap(bmp)
+            } else {
+                art.setPadding(24, 24, 24, 24)
+                art.setImageResource(R.drawable.ic_music)
+            }
+            lastMediaKey = mediaKey
+            lastMediaArt = bmp
         }
         val state = controller.playbackState
         val playing = state?.state == PlaybackState.STATE_PLAYING
@@ -676,6 +707,7 @@ class MainActivity : Activity() {
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
                 val cur = JSONObject(body).getJSONObject("current")
                 val temp = cur.getDouble("temperature_2m").roundToInt()
                 result = "$temp°C · " + weatherName(cur.getInt("weather_code"))
