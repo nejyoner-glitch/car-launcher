@@ -25,6 +25,8 @@ class LauncherUpdater(private val activity: Activity) {
     private val downloads = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private var checking = false
     private var polling = false
+    private var downloadDialog: AlertDialog? = null
+    private var installPromptShown = false
 
     fun onResume() {
         val id = prefs.getLong("download_id", -1L)
@@ -38,6 +40,8 @@ class LauncherUpdater(private val activity: Activity) {
 
     fun onPause() {
         polling = false
+        downloadDialog?.dismiss()
+        downloadDialog = null
         handler.removeCallbacksAndMessages(null)
     }
 
@@ -111,7 +115,7 @@ class LauncherUpdater(private val activity: Activity) {
                 .setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "car-launcher-$tag.apk")
             val id = downloads.enqueue(request)
             prefs.edit().putLong("download_id", id).putBoolean("install_pending", false).apply()
-            Toast.makeText(activity, "APK indiriliyor…", Toast.LENGTH_LONG).show()
+            showDownloadDialog("İndirme başlatılıyor…")
             poll(id)
         } catch (e: Exception) {
             AlertDialog.Builder(activity).setTitle("İndirme başlatılamadı")
@@ -120,16 +124,28 @@ class LauncherUpdater(private val activity: Activity) {
         }
     }
 
+    private fun showDownloadDialog(message: String) {
+        downloadDialog?.dismiss()
+        downloadDialog = AlertDialog.Builder(activity)
+            .setTitle("Launcher güncellemesi")
+            .setMessage(message)
+            .setNegativeButton("Arka planda indir") { _, _ -> downloadDialog = null }
+            .create().also { it.show() }
+    }
+
     private fun poll(id: Long) {
         if (polling) return
         polling = true
-        fun query(): Pair<Int, Int>? {
+        fun query(): Triple<Int, Int, Int>? {
             val cursor = downloads.query(DownloadManager.Query().setFilterById(id)) ?: return null
             cursor.use {
                 if (!it.moveToFirst()) return null
                 val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                 val reason = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
-                return status to reason
+                val received = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                val percent = if (total > 0L) ((received * 100L) / total).toInt().coerceIn(0, 100) else -1
+                return Triple(status, reason, percent)
             }
         }
         val task = object : Runnable {
@@ -139,20 +155,33 @@ class LauncherUpdater(private val activity: Activity) {
                 when (state?.first) {
                     DownloadManager.STATUS_SUCCESSFUL -> {
                         polling = false
-                        if (!prefs.getBoolean("install_pending", false)) {
-                            prefs.edit().putBoolean("install_pending", true).apply()
-                            install(id)
+                        downloadDialog?.dismiss()
+                        downloadDialog = null
+                        if (!installPromptShown) {
+                            installPromptShown = true
+                            AlertDialog.Builder(activity).setTitle("Güncelleme indirildi")
+                                .setMessage("APK hazır. Android kurulum ekranını açmak için Yükle seçeneğine dokun.")
+                                .setPositiveButton("Yükle") { _, _ -> install(id) }
+                                .setNegativeButton("Sonra", null).show()
                         }
                     }
                     DownloadManager.STATUS_FAILED -> {
                         polling = false
+                        downloadDialog?.dismiss()
+                        downloadDialog = null
                         prefs.edit().remove("download_id").remove("install_pending").apply()
                         AlertDialog.Builder(activity).setTitle("APK indirilemedi")
                             .setMessage("İndirme yöneticisi hata kodu: ${state.second}. Tekrar deneyebilirsin.")
                             .setPositiveButton("Tamam", null).show()
                     }
                     null -> polling = false
-                    else -> handler.postDelayed(this, 1500)
+                    else -> {
+                        if (state != null && downloadDialog?.isShowing == true) {
+                            val status = if (state.first == DownloadManager.STATUS_PAUSED) "İndirme duraklatıldı (kod: ${state.second})" else if (state.third >= 0) "İndiriliyor: %${state.third}" else "İndiriliyor…"
+                            downloadDialog?.setMessage(status)
+                        }
+                        handler.postDelayed(this, 1500)
+                    }
                 }
             }
         }
@@ -162,6 +191,7 @@ class LauncherUpdater(private val activity: Activity) {
     fun retryInstall() {
         val id = prefs.getLong("download_id", -1L)
         if (id > 0) install(id)
+        else Toast.makeText(activity, "İndirilmiş APK bulunamadı", Toast.LENGTH_LONG).show()
     }
 
     private fun install(id: Long) {

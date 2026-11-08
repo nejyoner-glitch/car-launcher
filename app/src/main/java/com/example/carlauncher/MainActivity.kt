@@ -10,6 +10,13 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Color
+import android.graphics.Typeface
+import android.view.Gravity
+import android.widget.FrameLayout
 import android.graphics.drawable.Drawable
 import android.location.Location
 import android.location.LocationListener
@@ -80,6 +87,7 @@ class MainActivity : Activity() {
     private lateinit var root: View
     private lateinit var clock: TextClock
     private lateinit var dateText: TextView
+    private lateinit var speedGauge: SpeedGaugeView
     private lateinit var speedText: TextView
     private lateinit var headingText: TextView
     private lateinit var tripText: TextView
@@ -104,6 +112,10 @@ class MainActivity : Activity() {
 
     private var weatherFetching = false
     private var lastWeatherFetch = 0L
+    private var lastMediaRefresh = 0L
+    private var lastMediaKey = ""
+    private var lastMediaArt: Bitmap? = null
+    private var lastAutoCarplayAttempt = 0L
 
     // ---------------------------------------------------------------- yaşam döngüsü
 
@@ -115,11 +127,13 @@ class MainActivity : Activity() {
         root = findViewById(R.id.root)
         clock = findViewById(R.id.clock)
         dateText = findViewById(R.id.date)
+        speedGauge = findViewById(R.id.speedGauge)
         speedText = findViewById(R.id.speed)
         headingText = findViewById(R.id.heading)
         tripText = findViewById(R.id.trip)
         gpsStatus = findViewById(R.id.gpsStatus)
         weatherText = findViewById(R.id.weather)
+        weatherText.text = prefs.getString("weather_cached", "Hava durumu bekleniyor")
         title = findViewById(R.id.title)
         artist = findViewById(R.id.artist)
         art = findViewById(R.id.art)
@@ -135,6 +149,7 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.btnNext).setOnClickListener { mediaNext() }
         btnPlay.setOnClickListener { mediaPlayPause() }
         findViewById<View>(R.id.btnAllApps).setOnClickListener { showAllApps() }
+        findViewById<View>(R.id.btnCarPlay).setOnClickListener { openPhoneProjection() }
         findViewById<View>(R.id.btnVolDown).setOnClickListener { changeVolume(AudioManager.ADJUST_LOWER) }
         findViewById<View>(R.id.btnVolUp).setOnClickListener { changeVolume(AudioManager.ADJUST_RAISE) }
         findViewById<View>(R.id.btnMute).setOnClickListener {
@@ -160,13 +175,9 @@ class MainActivity : Activity() {
         applyTheme()
         updateTripText()
         requestLocationIfNeeded()
+        if (savedInstanceState == null) showRenaultSplash()
 
-        // Açılışta seçili uygulamayı (ör. Zlink) bir kez otomatik başlat.
-        if (savedInstanceState == null && !autoStarted && SystemClock.elapsedRealtime() < 3 * 60 * 1000) {
-            autoStarted = true
-            val pkg = prefs.getString("autostart", null)
-            if (pkg != null) handler.postDelayed({ launchPackage(pkg) }, 3000)
-        }
+        // CarPlay launch is scheduled from onResume after preferences and UI are ready.
     }
 
     override fun onResume() {
@@ -176,6 +187,7 @@ class MainActivity : Activity() {
         startLocation()
         handler.post(tick)
         launcherUpdater.onResume()
+        scheduleCarPlayStart()
     }
 
     override fun onPause() {
@@ -211,11 +223,94 @@ class MainActivity : Activity() {
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
     }
 
+    private fun showRenaultSplash() {
+        // Only on a fresh Activity launch, not on resume from CarPlay or other apps.
+        val overlay = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(7, 11, 20))
+            isClickable = true
+            isFocusable = true
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        val density = resources.displayMetrics.density
+        val emblem = object : View(this) {
+            private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(220, 228, 238)
+                style = Paint.Style.STROKE
+                strokeWidth = 9f
+                strokeJoin = Paint.Join.ROUND
+            }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val sx = width / 200f
+                val sy = height / 220f
+                canvas.save()
+                canvas.scale(sx, sy)
+                val diamond = Path().apply {
+                    moveTo(100f, 9f)
+                    lineTo(176f, 108f)
+                    lineTo(100f, 211f)
+                    lineTo(24f, 108f)
+                    close()
+                }
+                canvas.drawPath(diamond, paint)
+                val inner = Path().apply {
+                    moveTo(100f, 46f)
+                    lineTo(145f, 108f)
+                    lineTo(100f, 173f)
+                    lineTo(55f, 108f)
+                    close()
+                }
+                paint.strokeWidth = 7f
+                canvas.drawPath(inner, paint)
+                canvas.restore()
+            }
+        }
+        content.addView(emblem, LinearLayout.LayoutParams((130 * density).toInt(), (142 * density).toInt()))
+        content.addView(TextView(this).apply {
+            text = "RENAULT"
+            textSize = 27f
+            letterSpacing = 0.2f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = (12 * density).toInt() })
+        overlay.addView(content, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+        val decor = window.decorView as ViewGroup
+        decor.addView(overlay, ViewGroup.LayoutParams(-1, -1))
+        overlay.alpha = 0f
+        overlay.animate().alpha(1f).setDuration(220).start()
+        handler.postDelayed({
+            if (!isFinishing && overlay.parent != null) {
+                overlay.animate().alpha(0f).setDuration(350).withEndAction {
+                    (overlay.parent as? ViewGroup)?.removeView(overlay)
+                }.start()
+            }
+        }, 1650)
+    }
+
+    private fun scheduleCarPlayStart() {
+        if (!prefs.getBoolean("carplayAuto", true)) return
+        val pkg = prefs.getString("autostart", null) ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (autoStarted || now - lastAutoCarplayAttempt < 20_000L) return
+        autoStarted = true
+        lastAutoCarplayAttempt = now
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed && hasWindowFocus() && !launchPackage(pkg)) {
+                Toast.makeText(this, "CarPlay uygulaması açılamadı. Ayarlar'dan tekrar seç.", Toast.LENGTH_LONG).show()
+            }
+        }, 2200)
+    }
+
     private fun accentColor(): Int = ACCENTS[prefs.getInt("accent", 0).coerceIn(0, ACCENTS.size - 1)]
 
     private fun applyTheme() {
         root.setBackgroundColor(BGS[prefs.getInt("bg", 0).coerceIn(0, BGS.size - 1)])
-        if (!overLimit) speedText.setTextColor(accentColor())
+        speedText.setTextColor(if (overLimit) RED else Color.WHITE)
+        speedGauge.gaugeColor = if (overLimit) RED else accentColor()
         progress.progressTintList = ColorStateList.valueOf(accentColor())
         progress.progressBackgroundTintList = ColorStateList.valueOf(0xFF2A3A52.toInt())
 
@@ -228,14 +323,17 @@ class MainActivity : Activity() {
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        if (!prefs.getBoolean("weather", true)) weatherText.text = ""
+        weatherText.text = if (prefs.getBoolean("weather", true)) prefs.getString("weather_cached", "Hava durumu bekleniyor") else ""
     }
 
     // Saniyede bir: tarih (Türkçe) ve medya bilgisi.
     private val tick = object : Runnable {
         override fun run() {
             dateText.text = dateFormat.format(Date())
-            refreshMedia()
+            if (SystemClock.elapsedRealtime() - lastMediaRefresh >= 1500L) {
+                refreshMedia()
+                lastMediaRefresh = SystemClock.elapsedRealtime()
+            }
             handler.postDelayed(this, 1000)
         }
     }
@@ -285,10 +383,24 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showAllApps() {
-        showAppDialog(getString(R.string.all_apps), queryApps()) { chosen ->
-            chosen.pkg?.let { launchPackage(it) }
+    private fun openPhoneProjection() {
+        val preferred = prefs.getString("carplay_package", null)
+            ?: prefs.getString("autostart", null)
+        val candidates = listOfNotNull(preferred) + listOf(
+            "com.zjinnova.zlink", "com.zjinnova.zlink5", "com.zjinnova.zlink6",
+            "com.carlinkit.autokit"
+        )
+        if (candidates.distinct().any { launchPackage(it) }) return
+        showAppDialog("Android Auto / CarPlay uygulamasını seç", queryApps()) { selected ->
+            selected.pkg?.let {
+                prefs.edit().putString("carplay_package", it).apply()
+                launchPackage(it)
+            }
         }
+    }
+
+    private fun showAllApps() {
+        startActivity(Intent(this, AllAppsActivity::class.java))
     }
 
     private fun showAppDialog(titleText: String, items: List<AppItem>, onPick: (AppItem) -> Unit) {
@@ -375,7 +487,8 @@ class MainActivity : Activity() {
             "Varsayılan ana ekran uygulaması",
             "Sistem ayarları",
             "Güncellemeleri kontrol et",
-            "İndirilen güncellemeyi yükle"
+            "İndirilen güncellemeyi yükle",
+            "CarPlay otomatik açılış: " + (if (prefs.getBoolean("carplayAuto", true)) "Açık" else "Kapalı")
         )
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle(R.string.settings_title)
@@ -440,6 +553,10 @@ class MainActivity : Activity() {
             13 -> openSettingsScreen(Settings.ACTION_SETTINGS)
             14 -> launcherUpdater.check(true)
             15 -> launcherUpdater.retryInstall()
+            16 -> {
+                prefs.edit().putBoolean("carplayAuto", !prefs.getBoolean("carplayAuto", true)).apply()
+                showSettings()
+            }
         }
     }
 
@@ -499,19 +616,28 @@ class MainActivity : Activity() {
             art.setImageResource(R.drawable.ic_music)
             btnPlay.setImageResource(R.drawable.ic_play)
             progress.visibility = View.INVISIBLE
+            lastMediaKey = ""
+            lastMediaArt = null
             return
         }
         val meta = controller.metadata
-        title.text = meta?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: getString(R.string.no_media)
-        artist.text = meta?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        val songTitle = meta?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: getString(R.string.no_media)
+        val songArtist = meta?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        if (title.text.toString() != songTitle) title.text = songTitle
+        if (artist.text.toString() != songArtist) artist.text = songArtist
         val bmp: Bitmap? = meta?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: meta?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        if (bmp != null) {
-            art.setPadding(0, 0, 0, 0)
-            art.setImageBitmap(bmp)
-        } else {
-            art.setPadding(24, 24, 24, 24)
-            art.setImageResource(R.drawable.ic_music)
+        val mediaKey = controller.packageName + "|" + songTitle + "|" + songArtist
+        if (mediaKey != lastMediaKey || bmp !== lastMediaArt) {
+            if (bmp != null) {
+                art.setPadding(0, 0, 0, 0)
+                art.setImageBitmap(bmp)
+            } else {
+                art.setPadding(24, 24, 24, 24)
+                art.setImageResource(R.drawable.ic_music)
+            }
+            lastMediaKey = mediaKey
+            lastMediaArt = bmp
         }
         val state = controller.playbackState
         val playing = state?.state == PlaybackState.STATE_PLAYING
@@ -567,6 +693,7 @@ class MainActivity : Activity() {
             val kmhF = if (location.hasSpeed()) location.speed * 3.6f else 0f
             val kmh = if (kmhF < 2f) 0 else kmhF.roundToInt()
             speedText.text = kmh.toString()
+            speedGauge.speedKmh = kmh
             if (kmh > maxKmh) maxKmh = kmh
 
             val prev = lastLoc
@@ -582,7 +709,8 @@ class MainActivity : Activity() {
             val over = limit > 0 && kmh > limit
             if (over && !overLimit) beep()
             overLimit = over
-            speedText.setTextColor(if (over) RED else accentColor())
+            speedText.setTextColor(if (over) RED else Color.WHITE)
+            speedGauge.gaugeColor = if (over) RED else accentColor()
 
             updateTripText()
             maybeFetchWeather(location)
@@ -676,6 +804,7 @@ class MainActivity : Activity() {
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
                 val cur = JSONObject(body).getJSONObject("current")
                 val temp = cur.getDouble("temperature_2m").roundToInt()
                 result = "$temp°C · " + weatherName(cur.getInt("weather_code"))
@@ -686,7 +815,10 @@ class MainActivity : Activity() {
             val finalResult = result
             runOnUiThread {
                 weatherFetching = false
-                if (finalResult != null) weatherText.text = finalResult
+                if (finalResult != null) {
+                    prefs.edit().putString("weather_cached", finalResult).apply()
+                    if (prefs.getBoolean("weather", true)) weatherText.text = finalResult
+                }
             }
         }.start()
     }
