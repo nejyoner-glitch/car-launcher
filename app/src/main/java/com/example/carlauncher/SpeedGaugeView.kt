@@ -107,86 +107,166 @@ class SpeedGaugeView @JvmOverloads constructor(
         p.shader = null
     }
 
-    // Yandan görünüm hatchback silueti. Orijinal çizimdir, belirli bir marka değildir.
+    private fun buildBody(fx: (Float) -> Float, fy: (Float) -> Float) {
+        body.reset()
+        body.moveTo(fx(.035f), fy(.07f))
+        body.lineTo(fx(.015f), fy(.16f))
+        body.quadTo(fx(.012f), fy(.215f), fx(.05f), fy(.235f))
+        body.lineTo(fx(.085f), fy(.248f))
+        body.cubicTo(fx(.13f), fy(.27f), fx(.16f), fy(.34f), fx(.215f), fy(.372f))
+        body.quadTo(fx(.25f), fy(.388f), fx(.31f), fy(.388f))
+        body.lineTo(fx(.52f), fy(.388f))
+        body.cubicTo(fx(.58f), fy(.388f), fx(.62f), fy(.35f), fx(.665f), fy(.31f))
+        body.lineTo(fx(.775f), fy(.236f))
+        body.lineTo(fx(.80f), fy(.228f))
+        body.lineTo(fx(.945f), fy(.21f))
+        body.quadTo(fx(.99f), fy(.195f), fx(.99f), fy(.13f))
+        body.lineTo(fx(.978f), fy(.085f))
+        body.lineTo(fx(.965f), fy(.07f))
+        body.close()
+    }
+
+    // Yandan görünüm 5 kapılı hatchback. Orijinal çizimdir, belirli bir marka veya model değildir.
     private fun drawCar(canvas: Canvas, cx: Float, top: Float, carW: Float) {
         val left = cx - carW / 2f
         val carH = carW * .4f
         fun fx(x: Float) = left + x * carW
         fun fy(y: Float) = top + carH - y * carW
+        val ar = Color.red(gaugeColor)
+        val ag = Color.green(gaugeColor)
+        val ab = Color.blue(gaugeColor)
 
         // zemin gölgesi
         p.reset()
         p.isAntiAlias = true
-        p.color = Color.argb(110, 0, 0, 0)
-        oval.set(fx(.0f), fy(.025f), fx(1f), fy(-.02f))
+        p.color = Color.argb(120, 0, 0, 0)
+        oval.set(fx(-.01f), fy(.03f), fx(1.01f), fy(-.025f))
         canvas.drawOval(oval, p)
 
-        body.reset()
-        body.moveTo(fx(.03f), fy(.07f))
-        body.lineTo(fx(.02f), fy(.19f))
-        body.quadTo(fx(.03f), fy(.24f), fx(.09f), fy(.255f))
-        body.lineTo(fx(.19f), fy(.36f))
-        body.quadTo(fx(.21f), fy(.385f), fx(.27f), fy(.385f))
-        body.lineTo(fx(.55f), fy(.385f))
-        body.quadTo(fx(.62f), fy(.38f), fx(.68f), fy(.30f))
-        body.lineTo(fx(.77f), fy(.235f))
-        body.lineTo(fx(.93f), fy(.205f))
-        body.quadTo(fx(.985f), fy(.19f), fx(.985f), fy(.13f))
-        body.lineTo(fx(.975f), fy(.07f))
-        body.close()
-
+        buildBody({ fx(it) }, { fy(it) })
         p.style = Paint.Style.FILL
         p.shader = LinearGradient(
-            0f, fy(.39f), 0f, fy(.05f),
-            intArrayOf(0xFF3A5C80.toInt(), 0xFF16304D.toInt()), null, Shader.TileMode.CLAMP
+            0f, fy(.39f), 0f, fy(.06f),
+            intArrayOf(0xFF4A6F96.toInt(), 0xFF2A4868.toInt(), 0xFF142B45.toInt()),
+            floatArrayOf(0f, .55f, 1f), Shader.TileMode.CLAMP
         )
         canvas.drawPath(body, p)
         p.shader = null
 
-        // camlar
-        glass.reset()
-        glass.moveTo(fx(.20f), fy(.265f))
-        glass.lineTo(fx(.285f), fy(.355f))
-        glass.lineTo(fx(.54f), fy(.355f))
-        glass.lineTo(fx(.625f), fy(.272f))
-        glass.close()
-        p.color = Color.argb(185, 8, 20, 36)
-        canvas.drawPath(glass, p)
-        p.color = Color.argb(150, 58, 92, 128)
-        p.strokeWidth = carW * .012f
-        p.style = Paint.Style.STROKE
-        canvas.drawLine(fx(.41f), fy(.355f), fx(.41f), fy(.268f), p)
+        // alt eşik (siyah plastik)
+        p.color = 0xFF0B1726.toInt()
+        canvas.drawRect(fx(.07f), fy(.098f), fx(.93f), fy(.07f), p)
 
-        // gövde çizgisi
-        p.color = Color.argb(200, Color.red(gaugeColor), Color.green(gaugeColor), Color.blue(gaugeColor))
-        p.strokeWidth = carW * .014f
+        // camlar: ön ve arka kapı camı
+        p.color = Color.argb(215, 8, 20, 36)
+        glass.reset()
+        glass.moveTo(fx(.425f), fy(.272f)); glass.lineTo(fx(.425f), fy(.358f))
+        glass.lineTo(fx(.525f), fy(.358f))
+        glass.cubicTo(fx(.565f), fy(.358f), fx(.595f), fy(.33f), fx(.63f), fy(.272f))
+        glass.close()
+        canvas.drawPath(glass, p)
+        glass.reset()
+        glass.moveTo(fx(.205f), fy(.268f))
+        glass.cubicTo(fx(.225f), fy(.31f), fx(.25f), fy(.345f), fx(.285f), fy(.358f))
+        glass.lineTo(fx(.397f), fy(.358f)); glass.lineTo(fx(.397f), fy(.268f))
+        glass.close()
+        canvas.drawPath(glass, p)
+
+        // cam parlaması
+        p.color = Color.argb(70, 255, 255, 255)
+        glass.reset()
+        glass.moveTo(fx(.44f), fy(.352f)); glass.lineTo(fx(.50f), fy(.352f)); glass.lineTo(fx(.455f), fy(.285f)); glass.lineTo(fx(.44f), fy(.285f))
+        glass.close()
+        canvas.drawPath(glass, p)
+
+        // tavan parlaması
+        p.style = Paint.Style.STROKE
+        p.strokeCap = Paint.Cap.ROUND
+        p.strokeWidth = carW * .01f
+        p.color = Color.argb(80, 255, 255, 255)
+        canvas.drawLine(fx(.30f), fy(.381f), fx(.52f), fy(.381f), p)
+
+        // kapı hatları ve kollar
+        p.strokeWidth = carW * .006f
+        p.color = Color.argb(110, 6, 14, 24)
+        canvas.drawLine(fx(.411f), fy(.268f), fx(.411f), fy(.10f), p)
+        canvas.drawLine(fx(.19f), fy(.262f), fx(.19f), fy(.10f), p)
+        canvas.drawLine(fx(.635f), fy(.268f), fx(.62f), fy(.10f), p)
+        p.strokeWidth = carW * .011f
+        p.color = Color.argb(190, 200, 220, 240)
+        canvas.drawLine(fx(.345f), fy(.222f), fx(.385f), fy(.222f), p)
+        canvas.drawLine(fx(.535f), fy(.222f), fx(.575f), fy(.222f), p)
+
+        // yan ayna
+        p.style = Paint.Style.FILL
+        p.color = 0xFF28435F.toInt()
+        oval.set(fx(.625f), fy(.292f), fx(.668f), fy(.254f))
+        canvas.drawOval(oval, p)
+
+        // omuz çizgisi
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = carW * .007f
+        p.color = Color.argb(95, 255, 255, 255)
+        canvas.drawLine(fx(.10f), fy(.172f), fx(.95f), fy(.178f), p)
+
+        // gövde dış çizgisi (vurgu rengi)
+        buildBody({ fx(it) }, { fy(it) })
         p.strokeJoin = Paint.Join.ROUND
+        p.strokeWidth = carW * .013f
+        p.color = Color.argb(205, ar, ag, ab)
         canvas.drawPath(body, p)
 
-        // yan çizgi (kapı hattı)
-        p.color = Color.argb(90, 255, 255, 255)
-        p.strokeWidth = carW * .008f
-        canvas.drawLine(fx(.12f), fy(.18f), fx(.90f), fy(.17f), p)
-
-        // farlar
+        // ön far (LED imzası) ve sis farı
         p.style = Paint.Style.FILL
         p.color = 0xFFFFF3C4.toInt()
-        canvas.drawRoundRect(fx(.945f), fy(.19f), fx(.985f), fy(.15f), carW * .01f, carW * .01f, p)
+        glass.reset()
+        glass.moveTo(fx(.915f), fy(.212f)); glass.lineTo(fx(.985f), fy(.19f))
+        glass.lineTo(fx(.985f), fy(.162f)); glass.lineTo(fx(.93f), fy(.178f))
+        glass.close()
+        canvas.drawPath(glass, p)
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = carW * .007f
+        p.color = Color.argb(230, 255, 255, 255)
+        canvas.drawLine(fx(.905f), fy(.176f), fx(.95f), fy(.158f), p)
+        p.style = Paint.Style.FILL
+        p.color = 0xFFFFE08A.toInt()
+        canvas.drawCircle(fx(.955f), fy(.108f), carW * .011f, p)
+
+        // arka stop lambası
         p.color = 0xFFEF5350.toInt()
-        canvas.drawRoundRect(fx(.02f), fy(.2f), fx(.045f), fy(.15f), carW * .01f, carW * .01f, p)
+        glass.reset()
+        glass.moveTo(fx(.018f), fy(.215f)); glass.lineTo(fx(.05f), fy(.236f))
+        glass.lineTo(fx(.062f), fy(.205f)); glass.lineTo(fx(.024f), fy(.17f))
+        glass.close()
+        canvas.drawPath(glass, p)
 
         // tekerlekler
-        for (wx in floatArrayOf(.22f, .78f)) {
-            val wr = carW * .078f
+        for (wx in floatArrayOf(.215f, .795f)) {
+            val wcx = fx(wx)
+            val wcy = fy(.07f)
+            val wr = carW * .082f
             p.style = Paint.Style.FILL
-            p.color = 0xFF070F1A.toInt()
-            canvas.drawCircle(fx(wx), fy(.065f), wr * 1.12f, p)
-            p.color = 0xFF1E2F44.toInt()
-            canvas.drawCircle(fx(wx), fy(.065f), wr, p)
+            p.color = 0xFF050B14.toInt()
+            canvas.drawCircle(wcx, wcy, wr * 1.28f, p)
+            p.color = 0xFF111C2B.toInt()
+            canvas.drawCircle(wcx, wcy, wr * 1.04f, p)
+            p.color = 0xFFA9BCD3.toInt()
+            canvas.drawCircle(wcx, wcy, wr * .72f, p)
+            p.color = 0xFF2B3E55.toInt()
+            canvas.drawCircle(wcx, wcy, wr * .60f, p)
             p.style = Paint.Style.STROKE
-            p.strokeWidth = carW * .01f
-            p.color = Color.argb(220, Color.red(gaugeColor), Color.green(gaugeColor), Color.blue(gaugeColor))
-            canvas.drawCircle(fx(wx), fy(.065f), wr * .55f, p)
+            p.strokeWidth = carW * .008f
+            p.color = Color.argb(235, ar, ag, ab)
+            for (k in 0 until 5) {
+                val ang = Math.toRadians((k * 72 + 18).toDouble())
+                canvas.drawLine(
+                    wcx, wcy,
+                    wcx + (wr * .66f * cos(ang)).toFloat(), wcy + (wr * .66f * sin(ang)).toFloat(), p
+                )
+            }
+            p.style = Paint.Style.FILL
+            p.color = 0xFFE6EDF7.toInt()
+            canvas.drawCircle(wcx, wcy, wr * .14f, p)
         }
     }
 
