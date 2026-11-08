@@ -53,7 +53,8 @@ class MainActivity : Activity() {
     private data class AppItem(val label: String, val pkg: String?, val icon: Drawable?)
 
     private companion object {
-        const val SLOT_COUNT = 6
+        const val PER_PAGE = 6
+        const val PAGES = 2
         const val REQ_LOCATION = 100
         var autoStarted = false
 
@@ -78,7 +79,10 @@ class MainActivity : Activity() {
     private lateinit var root: View
     private lateinit var clock: TextClock
     private lateinit var dateText: TextView
-    private lateinit var speedText: TextView
+    private lateinit var gauge: GaugeView
+    private lateinit var dots: TextView
+    private var curSpeed = 0
+    private var page = 0
     private lateinit var headingText: TextView
     private lateinit var tripText: TextView
     private lateinit var gpsStatus: TextView
@@ -113,7 +117,8 @@ class MainActivity : Activity() {
         root = findViewById(R.id.root)
         clock = findViewById(R.id.clock)
         dateText = findViewById(R.id.date)
-        speedText = findViewById(R.id.speed)
+        gauge = findViewById(R.id.gauge)
+        dots = findViewById(R.id.dots)
         headingText = findViewById(R.id.heading)
         tripText = findViewById(R.id.trip)
         gpsStatus = findViewById(R.id.gpsStatus)
@@ -146,6 +151,16 @@ class MainActivity : Activity() {
                 launchPackage(c.packageName)
             } else if (!hasNotificationAccess()) {
                 openSettingsScreen(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            }
+        }
+        findViewById<SwipeLayout>(R.id.mediaCard).onSwipe = { dir ->
+            if (dir > 0) mediaNext() else mediaPrev()
+        }
+        findViewById<SwipeLayout>(R.id.shortcutArea).onSwipe = { dir ->
+            val np = (page + dir).coerceIn(0, PAGES - 1)
+            if (np != page) {
+                page = np
+                buildShortcuts()
             }
         }
         findViewById<View>(R.id.speedCard).setOnLongClickListener {
@@ -211,7 +226,7 @@ class MainActivity : Activity() {
 
     private fun applyTheme() {
         root.setBackgroundColor(BGS[prefs.getInt("bg", 0).coerceIn(0, BGS.size - 1)])
-        if (!overLimit) speedText.setTextColor(accentColor())
+        updateGauge()
         progress.progressTintList = ColorStateList.valueOf(accentColor())
         progress.progressBackgroundTintList = ColorStateList.valueOf(0xFF2A3A52.toInt())
 
@@ -242,8 +257,9 @@ class MainActivity : Activity() {
         row1.removeAllViews()
         row2.removeAllViews()
         val inflater = LayoutInflater.from(this)
-        for (slot in 0 until SLOT_COUNT) {
-            val parent = if (slot < SLOT_COUNT / 2) row1 else row2
+        for (i in 0 until PER_PAGE) {
+            val slot = page * PER_PAGE + i
+            val parent = if (i < PER_PAGE / 2) row1 else row2
             val view = inflater.inflate(R.layout.item_app, parent, false)
             val icon = view.findViewById<ImageView>(R.id.icon)
             val label = view.findViewById<TextView>(R.id.label)
@@ -269,6 +285,7 @@ class MainActivity : Activity() {
             }
             parent.addView(view)
         }
+        dots.text = (0 until PAGES).joinToString("   ") { if (it == page) "●" else "○" }
     }
 
     private fun pickForSlot(slot: Int) {
@@ -282,9 +299,66 @@ class MainActivity : Activity() {
     }
 
     private fun showAllApps() {
-        showAppDialog(getString(R.string.all_apps), queryApps()) { chosen ->
-            chosen.pkg?.let { launchPackage(it) }
+        val all = queryApps()
+        val density = resources.displayMetrics.density
+        val pad = (12 * density).toInt()
+
+        val container = LinearLayout(this)
+        container.orientation = LinearLayout.VERTICAL
+        container.setPadding(pad, pad, pad, pad)
+
+        val search = android.widget.EditText(this)
+        search.hint = "Uygulama ara"
+        search.setSingleLine(true)
+        search.setTextColor(0xFFFFFFFF.toInt())
+        search.setHintTextColor(0xFF8FA3BF.toInt())
+        container.addView(search, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val grid = android.widget.GridView(this)
+        grid.numColumns = 5
+        grid.horizontalSpacing = pad
+        grid.verticalSpacing = pad
+        grid.setPadding(0, pad, 0, 0)
+        container.addView(grid, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        val shown = ArrayList(all)
+        val adapter = object : ArrayAdapter<AppItem>(this, 0, shown) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = convertView ?: LayoutInflater.from(context)
+                    .inflate(R.layout.item_grid, parent, false)
+                val item = getItem(position)!!
+                v.findViewById<ImageView>(R.id.icon).setImageDrawable(item.icon)
+                v.findViewById<TextView>(R.id.label).text = item.label
+                return v
+            }
         }
+        grid.adapter = adapter
+
+        val dialog = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar_MinWidth)
+            .setView(container)
+            .setNegativeButton(R.string.close, null)
+            .create()
+
+        grid.setOnItemClickListener { _, _, pos, _ ->
+            adapter.getItem(pos)?.pkg?.let { launchPackage(it) }
+            dialog.dismiss()
+        }
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(e: android.text.Editable?) {
+                val q = e.toString().trim().lowercase()
+                adapter.clear()
+                adapter.addAll(if (q.isEmpty()) all else all.filter { it.label.lowercase().contains(q) })
+            }
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+        })
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+            (resources.displayMetrics.heightPixels * 0.9f).toInt()
+        )
     }
 
     private fun showAppDialog(titleText: String, items: List<AppItem>, onPick: (AppItem) -> Unit) {
@@ -558,7 +632,7 @@ class MainActivity : Activity() {
         override fun onLocationChanged(location: Location) {
             val kmhF = if (location.hasSpeed()) location.speed * 3.6f else 0f
             val kmh = if (kmhF < 2f) 0 else kmhF.roundToInt()
-            speedText.text = kmh.toString()
+            curSpeed = kmh
             if (kmh > maxKmh) maxKmh = kmh
 
             val prev = lastLoc
@@ -574,7 +648,7 @@ class MainActivity : Activity() {
             val over = limit > 0 && kmh > limit
             if (over && !overLimit) beep()
             overLimit = over
-            speedText.setTextColor(if (over) RED else accentColor())
+            updateGauge()
 
             updateTripText()
             maybeFetchWeather(location)
@@ -586,6 +660,11 @@ class MainActivity : Activity() {
         override fun onProviderDisabled(provider: String) {
             gpsStatus.text = getString(R.string.gps_waiting)
         }
+    }
+
+    private fun updateGauge() {
+        val limit = LIMITS[prefs.getInt("limit", 0).coerceIn(0, LIMITS.size - 1)]
+        gauge.setValues(curSpeed, limit, overLimit, accentColor())
     }
 
     private fun updateTripText() {
